@@ -1,10 +1,33 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Animated, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, User, Building2, ArrowRight, Shield } from 'lucide-react-native';
+import { jwtDecode } from 'jwt-decode';
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  User,
+  Building2,
+  ArrowRight,
+  Shield,
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+
+import { authentication } from '../api';
+import { useAuth } from '@/context/auth-context';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -14,6 +37,9 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const auth = useAuth();
+  const login = auth.login;
   const router = useRouter();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -46,35 +72,75 @@ export default function Login() {
     if (!username || !password) {
       // Add shake animation for validation
       Animated.sequence([
-        Animated.timing(buttonScale, { toValue: 0.95, duration: 100, useNativeDriver: true }),
-        Animated.timing(buttonScale, { toValue: 1, duration: 100, useNativeDriver: true }),
+        Animated.timing(buttonScale, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonScale, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
       ]).start();
       return;
     }
 
     setIsLoading(true);
-    
     // Animate button press
     Animated.timing(buttonScale, {
       toValue: 0.95,
       duration: 150,
       useNativeDriver: true,
     }).start();
+    try {
+      const userData = await authentication(username, password);
 
-    setTimeout(() => {
+      if (userData?.status === 0) {
+        try {
+          await login(userData?.data?.access_token);
+        } catch (e) {
+          setError('Login failed. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        Animated.timing(buttonScale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }).start(() => {
+          // Place router.replace after the animation completes
+          router.replace('/(tabs)');
+        });
+      } else {
+        // You can place Animated.timing here as well if you want to animate on failed login
+        Animated.timing(buttonScale, {
+          toValue: 1,
+          duration: 150,
+          useNativeDriver: true,
+        }).start();
+        setError(userData?.message);
+      }
+    } catch (err) {
+      setError('Please try again.');
+    } finally {
       setIsLoading(false);
-      Animated.timing(buttonScale, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-      router.replace('/(tabs)');
-    }, 2000);
+    }
+
+    // setTimeout(() => {
+    //   setIsLoading(false);
+    //   Animated.timing(buttonScale, {
+    //     toValue: 1,
+    //     duration: 150,
+    //     useNativeDriver: true,
+    //   }).start();
+    //   router.replace('/(tabs)');
+    // }, 2000);
   };
 
   const getInputStyle = (fieldName: string) => [
     styles.input,
-    focusedField === fieldName && styles.inputFocused
+    focusedField === fieldName && styles.inputFocused,
   ];
 
   return (
@@ -90,20 +156,17 @@ export default function Login() {
           <View style={styles.circle3} />
         </View>
 
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          <Animated.View 
+          <Animated.View
             style={[
               styles.content,
               {
                 opacity: fadeAnim,
-                transform: [
-                  { translateY: slideAnim },
-                  { scale: scaleAnim }
-                ]
-              }
+                transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+              },
             ]}
           >
             {/* Header Section */}
@@ -117,20 +180,35 @@ export default function Login() {
                 </LinearGradient>
                 <View style={styles.logoGlow} />
               </View>
-              
+
               <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to HAT Management System</Text>
+              <Text style={styles.subtitle}>
+                Sign in to HAT Management System
+              </Text>
             </View>
 
             {/* Login Form */}
             <BlurView intensity={20} tint="dark" style={styles.formContainer}>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
               <View style={styles.form}>
                 {/* Username Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Username</Text>
-                  <View style={[styles.inputContainer, focusedField === 'username' && styles.inputContainerFocused]}>
+                  <View
+                    style={[
+                      styles.inputContainer,
+                      focusedField === 'username' &&
+                        styles.inputContainerFocused,
+                    ]}
+                  >
                     <View style={styles.inputIcon}>
-                      <User size={20} color={focusedField === 'username' ? '#60A5FA' : '#64748b'} />
+                      <User
+                        size={20}
+                        color={
+                          focusedField === 'username' ? '#60A5FA' : '#64748b'
+                        }
+                      />
                     </View>
                     <TextInput
                       style={getInputStyle('username')}
@@ -149,9 +227,20 @@ export default function Login() {
                 {/* Password Input */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Password</Text>
-                  <View style={[styles.inputContainer, focusedField === 'password' && styles.inputContainerFocused]}>
+                  <View
+                    style={[
+                      styles.inputContainer,
+                      focusedField === 'password' &&
+                        styles.inputContainerFocused,
+                    ]}
+                  >
                     <View style={styles.inputIcon}>
-                      <Lock size={20} color={focusedField === 'password' ? '#60A5FA' : '#64748b'} />
+                      <Lock
+                        size={20}
+                        color={
+                          focusedField === 'password' ? '#60A5FA' : '#64748b'
+                        }
+                      />
                     </View>
                     <TextInput
                       style={getInputStyle('password')}
@@ -181,19 +270,28 @@ export default function Login() {
                 {/* Login Button */}
                 <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
                   <TouchableOpacity
-                    style={[styles.loginButton, isLoading && styles.loginButtonLoading]}
+                    style={[
+                      styles.loginButton,
+                      isLoading && styles.loginButtonLoading,
+                    ]}
                     onPress={handleLogin}
                     disabled={isLoading}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
-                      colors={isLoading ? ['#64748b', '#475569'] : ['#2563EB', '#3B82F6']}
+                      colors={
+                        isLoading
+                          ? ['#64748b', '#475569']
+                          : ['#2563EB', '#3B82F6']
+                      }
                       style={styles.loginButtonGradient}
                     >
                       {isLoading ? (
                         <View style={styles.loadingContainer}>
                           <View style={styles.loadingSpinner} />
-                          <Text style={styles.loginButtonText}>Signing In...</Text>
+                          <Text style={styles.loginButtonText}>
+                            Signing In...
+                          </Text>
                         </View>
                       ) : (
                         <View style={styles.buttonContent}>
@@ -207,7 +305,9 @@ export default function Login() {
 
                 {/* Forgot Password */}
                 <TouchableOpacity style={styles.forgotPassword}>
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                  <Text style={styles.forgotPasswordText}>
+                    Forgot Password?
+                  </Text>
                 </TouchableOpacity>
               </View>
             </BlurView>
@@ -230,6 +330,7 @@ const styles = StyleSheet.create({
   },
   gradient: {
     flex: 1,
+    overflow: 'hidden',
   },
   backgroundElements: {
     position: 'absolute',
@@ -319,6 +420,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     overflow: 'hidden',
     marginBottom: 24,
+  },
+
+  errorText: {
+    color: '#ff3b30',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   form: {
     padding: 24,

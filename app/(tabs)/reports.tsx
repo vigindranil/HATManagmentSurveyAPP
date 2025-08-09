@@ -1,18 +1,51 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChartBar as BarChart3, TrendingUp, Download, Filter, Calendar, MapPin } from 'lucide-react-native';
+import {
+  ChartBar as BarChart3,
+  TrendingUp,
+  Download,
+  Filter,
+  Calendar,
+  MapPin,
+} from 'lucide-react-native';
 
 export default function Reports() {
   const reportData = [
-    { title: 'Monthly Survey Report', type: 'PDF', date: '2024-01-15', size: '2.4 MB' },
-    { title: 'Location Analysis', type: 'Excel', date: '2024-01-10', size: '1.8 MB' },
-    { title: 'Stall Usage Summary', type: 'PDF', date: '2024-01-05', size: '3.2 MB' },
+    {
+      title: 'Monthly Survey Report',
+      type: 'PDF',
+      date: '2024-01-15',
+      size: '2.4 MB',
+    },
+    {
+      title: 'Location Analysis',
+      type: 'Excel',
+      date: '2024-01-10',
+      size: '1.8 MB',
+    },
+    {
+      title: 'Stall Usage Summary',
+      type: 'PDF',
+      date: '2024-01-05',
+      size: '3.2 MB',
+    },
   ];
 
   const analytics = [
     { label: 'Total Surveys', value: '156', trend: '+12%', color: '#2563EB' },
-    { label: 'Completed This Month', value: '45', trend: '+8%', color: '#059669' },
+    {
+      label: 'Completed This Month',
+      value: '45',
+      trend: '+8%',
+      color: '#059669',
+    },
     { label: 'Pending Reviews', value: '12', trend: '-5%', color: '#DC2626' },
     { label: 'Average Time', value: '8 min', trend: '-2%', color: '#7C3AED' },
   ];
@@ -27,21 +60,26 @@ export default function Reports() {
         </View>
 
         {/* Filter Options */}
-        <View style={styles.filterContainer}>
-          <TouchableOpacity style={styles.filterButton}>
-            <Calendar size={18} color="#64748b" />
-            <Text style={styles.filterText}>Date Range</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <MapPin size={18} color="#64748b" />
-            <Text style={styles.filterText}>Location</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.filterButton}>
-            <Filter size={18} color="#64748b" />
-            <Text style={styles.filterText}>Filter</Text>
-          </TouchableOpacity>
+        <View style={styles.scrollHorizontalView}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.filterContainer}
+          >
+            <TouchableOpacity style={styles.filterButton}>
+              <Calendar size={18} color="#64748b" />
+              <Text style={styles.filterText}>Date Range</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterButton}>
+              <MapPin size={18} color="#64748b" />
+              <Text style={styles.filterText}>Location</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.filterButton}>
+              <Filter size={18} color="#64748b" />
+              <Text style={styles.filterText}>Filter</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-
         {/* Analytics Cards */}
         <View style={styles.analyticsContainer}>
           <Text style={styles.sectionTitle}>Key Metrics</Text>
@@ -49,10 +87,12 @@ export default function Reports() {
             {analytics.map((metric, index) => (
               <View key={index} style={styles.metricCard}>
                 <View style={styles.metricHeader}>
-                  <Text style={styles.metricLabel}>{metric.label}</Text>
-                  <Text style={[styles.metricTrend, { color: metric.color }]}>
-                    {metric.trend}
-                  </Text>
+                    <Text style={styles.metricLabel}>{metric.label}</Text>
+                  <View>
+                    <Text style={[styles.metricTrend, { color: metric.color }]}>
+                      {metric.trend}
+                    </Text>
+                  </View>
                 </View>
                 <Text style={styles.metricValue}>{metric.value}</Text>
               </View>
@@ -65,7 +105,9 @@ export default function Reports() {
           <Text style={styles.sectionTitle}>Survey Trends</Text>
           <View style={styles.chartPlaceholder}>
             <BarChart3 size={48} color="#94a3b8" />
-            <Text style={styles.chartText}>Chart visualization would appear here</Text>
+            <Text style={styles.chartText}>
+              Chart visualization would appear here
+            </Text>
           </View>
         </View>
 
@@ -116,7 +158,6 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
     marginBottom: 24,
   },
   filterButton: {
@@ -140,6 +181,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
+
+  insideBox: {
+    flexDirection: 'row',
+  },
+
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
@@ -152,7 +198,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -6,
   },
   metricCard: {
-    width: '47%',
+    width: '50%',
     backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
@@ -176,8 +222,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   metricTrend: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
+   
   },
   metricValue: {
     fontSize: 24,
@@ -200,6 +247,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+
+  scrollHorizontalView: {
+    marginRight: 20,
+    marginLeft: 20,
   },
   chartText: {
     fontSize: 16,

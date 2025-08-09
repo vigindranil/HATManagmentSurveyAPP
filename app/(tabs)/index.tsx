@@ -1,18 +1,43 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  StatusBar,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FileText, MapPin, Users, TrendingUp, Plus, Clock, CircleCheck as CheckCircle, ArrowRight, ChartBar as BarChart3, Calendar, Target } from 'lucide-react-native';
+import {
+  FileText,
+  MapPin,
+  Users,
+  TrendingUp,
+  Plus,
+  Clock,
+  CircleCheck as CheckCircle,
+  ArrowRight,
+  ChartBar as BarChart3,
+  Calendar,
+  Target,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
+import { Platform } from 'react-native';
+import * as Location from 'expo-location';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 
 export default function Dashboard() {
   const router = useRouter();
-  const { pendingSurveys, getAllSurveys } = useOfflineStorage();
+  const { isOnline, pendingSurveys, getAllSurveys } = useOfflineStorage();
   const [totalSurveys, setTotalSurveys] = React.useState(156);
+
+
 
   React.useEffect(() => {
     loadSurveyStats();
@@ -23,250 +48,321 @@ export default function Dashboard() {
     setTotalSurveys(allSurveys.length);
   };
 
+
+
+ 
+
+  
+
+  
+
+
   const stats = [
-    { 
-      icon: FileText, 
-      title: 'Total Surveys', 
-      value: totalSurveys.toString(), 
+    {
+      icon: FileText,
+      title: 'Total Surveys',
+      value: totalSurveys.toString(),
       change: '+12%',
       color: '#2563EB',
       bgColor: '#EFF6FF',
-      description: 'This month'
+      description: 'This month',
     },
-    { 
-      icon: MapPin, 
-      title: 'Locations', 
-      value: '24', 
+    {
+      icon: MapPin,
+      title: 'Locations',
+      value: '24',
       change: '+3',
       color: '#0891B2',
       bgColor: '#F0FDFA',
-      description: 'Active areas'
+      description: 'Active areas',
     },
-    { 
-      icon: Users, 
-      title: 'Respondents', 
-      value: '89', 
+    {
+      icon: Users,
+      title: 'Respondents',
+      value: '89',
       change: '+18%',
       color: '#059669',
       bgColor: '#F0FDF4',
-      description: 'Unique users'
+      description: 'Unique users',
     },
-    { 
-      icon: Clock, 
-      title: 'Pending Sync', 
-      value: pendingSurveys.length.toString(), 
+    {
+      icon: Clock,
+      title: 'Pending Sync',
+      value: pendingSurveys.length.toString(),
       change: pendingSurveys.length > 0 ? 'Offline' : 'Synced',
       color: '#DC2626',
       bgColor: '#FEF2F2',
-      description: 'Offline surveys'
+      description: 'Offline surveys',
     },
   ];
 
   const recentSurveys = [
-    { 
-      id: 1, 
-      location: 'Kolkata Municipal Area', 
-      status: 'Completed', 
+    {
+      id: 1,
+      location: 'Kolkata Municipal Area',
+      status: 'Completed',
       date: '2 hours ago',
       progress: 100,
-      stallCount: 12
+      stallCount: 12,
     },
-    { 
-      id: 2, 
-      location: 'Howrah District', 
-      status: 'In Progress', 
+    {
+      id: 2,
+      location: 'Howrah District',
+      status: 'In Progress',
       date: '1 day ago',
       progress: 65,
-      stallCount: 8
+      stallCount: 8,
     },
-    { 
-      id: 3, 
-      location: 'North 24 Parganas', 
-      status: 'Pending', 
+    {
+      id: 3,
+      location: 'North 24 Parganas',
+      status: 'Pending',
       date: '2 days ago',
       progress: 0,
-      stallCount: 15
+      stallCount: 15,
     },
   ];
 
   const quickActions = [
     { icon: Plus, title: 'New Survey', color: '#2563EB', route: '/survey' },
-    { icon: BarChart3, title: 'Analytics', color: '#7C3AED', route: '/reports' },
+    {
+      icon: BarChart3,
+      title: 'Analytics',
+      color: '#7C3AED',
+      route: '/reports',
+    },
     { icon: Calendar, title: 'Schedule', color: '#059669', route: '/reports' },
     { icon: Target, title: 'Goals', color: '#DC2626', route: '/reports' },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': return '#059669';
-      case 'In Progress': return '#0891B2';
-      case 'Pending': return '#DC2626';
-      default: return '#6b7280';
+      case 'Completed':
+        return '#059669';
+      case 'In Progress':
+        return '#0891B2';
+      case 'Pending':
+        return '#DC2626';
+      default:
+        return '#6b7280';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Completed': return CheckCircle;
-      case 'In Progress': return Clock;
-      case 'Pending': return Clock;
-      default: return Clock;
+      case 'Completed':
+        return CheckCircle;
+      case 'In Progress':
+        return Clock;
+      case 'Pending':
+        return Clock;
+      default:
+        return Clock;
     }
   };
 
   const getStatusBgColor = (status: string) => {
     switch (status) {
-      case 'Completed': return '#F0FDF4';
-      case 'In Progress': return '#F0FDFA';
-      case 'Pending': return '#FEF2F2';
-      default: return '#F8FAFC';
+      case 'Completed':
+        return '#F0FDF4';
+      case 'In Progress':
+        return '#F0FDFA';
+      case 'Pending':
+        return '#FEF2F2';
+      default:
+        return '#F8FAFC';
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Offline Indicator */}
-        <OfflineIndicator />
-        
-        {/* Header with Gradient */}
-        <LinearGradient
-          colors={['#1E40AF', '#2563EB', '#3B82F6']}
-          style={styles.header}
-        >
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.headerGreeting}>Good Morning</Text>
-              <Text style={styles.headerTitle}>HAT Management</Text>
-              <Text style={styles.headerSubtitle}>Survey Dashboard</Text>
-            </View>
-            <View style={styles.headerStats}>
-              <Text style={styles.headerStatsNumber}>{totalSurveys}</Text>
-              <Text style={styles.headerStatsLabel}>Total Surveys</Text>
-            </View>
-          </View>
-        </LinearGradient>
-
-        {/* Quick Actions */}
-        <View style={styles.quickActionsContainer}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, index) => (
-              <TouchableOpacity 
-                key={index} 
-                style={styles.quickActionCard}
-                onPress={() => router.push(action.route)}
-                activeOpacity={0.7}
-              >
-                <LinearGradient
-                  colors={[action.color, action.color + '90']}
-                  style={styles.quickActionGradient}
-                >
-                  <action.icon size={24} color="#ffffff" />
-                </LinearGradient>
-                <Text style={styles.quickActionText}>{action.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Stats Cards */}
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>Overview</Text>
-          <View style={styles.statsGrid}>
-            {stats.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <View style={styles.statHeader}>
-                  <View style={[styles.statIcon, { backgroundColor: stat.bgColor }]}>
-                    <stat.icon size={20} color={stat.color} />
-                  </View>
-                  <View style={styles.statChange}>
-                    <Text style={[styles.changeText, { color: stat.color }]}>{stat.change}</Text>
-                  </View>
-                </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statTitle}>{stat.title}</Text>
-                <Text style={styles.statDescription}>{stat.description}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* New Survey CTA */}
-        <View style={styles.ctaContainer}>
-          <TouchableOpacity 
-            style={styles.newSurveyButton}
-            onPress={() => router.push('/survey')}
-            activeOpacity={0.9}
+    <>
+      <StatusBar
+        backgroundColor="green" // ✅ status bar will be green
+        barStyle="dark-content" // ✅ white icons/text
+        translucent={false} // ✅ important!
+      />
+      <SafeAreaView style={styles.container}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Offline Indicator */}
+          <OfflineIndicator />
+          {/* Header with Gradient */}
+          <LinearGradient
+            colors={['#1E40AF', '#2563EB', '#3B82F6']}
+            style={styles.header}
           >
-            <LinearGradient
-              colors={['#2563EB', '#3B82F6', '#60A5FA']}
-              style={styles.newSurveyGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.newSurveyContent}>
-                <View style={styles.newSurveyIcon}>
-                  <Plus size={24} color="#ffffff" />
-                </View>
-                <View style={styles.newSurveyText}>
-                  <Text style={styles.newSurveyTitle}>Start New Survey</Text>
-                  <Text style={styles.newSurveySubtitle}>Begin data collection</Text>
-                </View>
-                <ArrowRight size={20} color="#ffffff" />
+            <View style={styles.headerContent}>
+              <View>
+                <Text style={styles.headerGreeting}>Good Morning</Text>
+                <Text style={styles.headerTitle}>HAT Management</Text>
+                <Text style={styles.headerSubtitle}>Survey Dashboard</Text>
               </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+              <View style={styles.headerStats}>
+                <Text style={styles.headerStatsNumber}>{totalSurveys}</Text>
+                <Text style={styles.headerStatsLabel}>Total Surveys</Text>
+              </View>
+            </View>
+          </LinearGradient>
 
-        {/* Recent Surveys */}
-        <View style={styles.recentSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Surveys</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+          {/* Quick Actions */}
+          <View style={styles.quickActionsContainer}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.quickActionCard}
+                  onPress={() => router.push(action.route)}
+                  activeOpacity={0.7}
+                >
+                  <LinearGradient
+                    colors={[action.color, action.color + '90']}
+                    style={styles.quickActionGradient}
+                  >
+                    <action.icon size={24} color="#ffffff" />
+                  </LinearGradient>
+                  <Text style={styles.quickActionText}>{action.title}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Stats Cards */}
+          <View style={styles.statsContainer}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <View style={styles.statsGrid}>
+              {stats.map((stat, index) => (
+                <View key={index} style={styles.statCard}>
+                  <View style={styles.statHeader}>
+                    <View
+                      style={[
+                        styles.statIcon,
+                        { backgroundColor: stat.bgColor },
+                      ]}
+                    >
+                      <stat.icon size={20} color={stat.color} />
+                    </View>
+                    <View style={styles.statChange}>
+                      <Text style={[styles.changeText, { color: stat.color }]}>
+                        {stat.change}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                  <Text style={styles.statTitle}>{stat.title}</Text>
+                  <Text style={styles.statDescription}>{stat.description}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* New Survey CTA */}
+          <View style={styles.ctaContainer}>
+            <TouchableOpacity
+              style={styles.newSurveyButton}
+              onPress={() => router.push('/survey')}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={['#2563EB', '#3B82F6', '#60A5FA']}
+                style={styles.newSurveyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.newSurveyContent}>
+                  <View style={styles.newSurveyIcon}>
+                    <Plus size={24} color="#ffffff" />
+                  </View>
+                  <View style={styles.newSurveyText}>
+                    <Text style={styles.newSurveyTitle}>Start New Survey</Text>
+                    <Text style={styles.newSurveySubtitle}>
+                      Begin data collection
+                    </Text>
+                  </View>
+                  <ArrowRight size={20} color="#ffffff" />
+                </View>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
-          
-          {recentSurveys.map((survey) => {
-            const StatusIcon = getStatusIcon(survey.status);
-            return (
-              <TouchableOpacity key={survey.id} style={styles.surveyCard} activeOpacity={0.7}>
-                <View style={styles.surveyCardContent}>
-                  <View style={styles.surveyInfo}>
-                    <View style={styles.surveyHeader}>
-                      <Text style={styles.surveyLocation}>{survey.location}</Text>
-                      <Text style={styles.surveyDate}>{survey.date}</Text>
-                    </View>
-                    
-                    <View style={styles.surveyMeta}>
-                      <Text style={styles.stallCount}>{survey.stallCount} stalls</Text>
-                      <View style={[styles.surveyStatus, { backgroundColor: getStatusBgColor(survey.status) }]}>
-                        <StatusIcon size={14} color={getStatusColor(survey.status)} />
-                        <Text style={[styles.statusText, { color: getStatusColor(survey.status) }]}>
-                          {survey.status}
+
+          {/* Recent Surveys */}
+          <View style={styles.recentSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Surveys</Text>
+              <TouchableOpacity>
+                <Text style={styles.seeAllText}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {recentSurveys.map((survey) => {
+              const StatusIcon = getStatusIcon(survey.status);
+              return (
+                <TouchableOpacity
+                  key={survey.id}
+                  style={styles.surveyCard}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.surveyCardContent}>
+                    <View style={styles.surveyInfo}>
+                      <View style={styles.surveyHeader}>
+                        <Text style={styles.surveyLocation}>
+                          {survey.location}
                         </Text>
+                        <Text style={styles.surveyDate}>{survey.date}</Text>
                       </View>
+
+                      <View style={styles.surveyMeta}>
+                        <Text style={styles.stallCount}>
+                          {survey.stallCount} stalls
+                        </Text>
+                        <View
+                          style={[
+                            styles.surveyStatus,
+                            {
+                              backgroundColor: getStatusBgColor(survey.status),
+                            },
+                          ]}
+                        >
+                          <StatusIcon
+                            size={14}
+                            color={getStatusColor(survey.status)}
+                          />
+                          <Text
+                            style={[
+                              styles.statusText,
+                              { color: getStatusColor(survey.status) },
+                            ]}
+                          >
+                            {survey.status}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {survey.status === 'In Progress' && (
+                        <View style={styles.progressContainer}>
+                          <View style={styles.progressBar}>
+                            <View
+                              style={[
+                                styles.progressFill,
+                                { width: `${survey.progress}%` },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.progressText}>
+                            {survey.progress}% complete
+                          </Text>
+                        </View>
+                      )}
                     </View>
 
-                    {survey.status === 'In Progress' && (
-                      <View style={styles.progressContainer}>
-                        <View style={styles.progressBar}>
-                          <View style={[styles.progressFill, { width: `${survey.progress}%` }]} />
-                        </View>
-                        <Text style={styles.progressText}>{survey.progress}% complete</Text>
-                      </View>
-                    )}
+                    <ArrowRight size={16} color="#9CA3AF" />
                   </View>
-                  
-                  <ArrowRight size={16} color="#9CA3AF" />
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -281,6 +377,9 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginInline: 10,
     marginBottom: 20,
   },
   headerContent: {
@@ -307,6 +406,7 @@ const styles = StyleSheet.create({
   },
   headerStats: {
     alignItems: 'flex-end',
+    marginLeft: 5,
   },
   headerStatsNumber: {
     fontSize: 32,
@@ -314,7 +414,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   headerStatsLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#BFDBFE',
     fontWeight: '500',
   },

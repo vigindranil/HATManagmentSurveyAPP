@@ -8,7 +8,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function Splash() {
   const router = useRouter();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current; 
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const sparkleAnim = useRef(new Animated.Value(0)).current;
@@ -171,7 +171,7 @@ export default function Splash() {
               style={[
                 styles.loadingProgress,
                 {
-                  width: sparkleAnim.interpolate({
+                    scaleX: sparkleAnim.interpolate({
                     inputRange: [0, 1],
                     outputRange: ['0%', '100%'],
                   })
