@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/context/auth-context';
+import { AlertNotificationRoot } from 'react-native-alert-notification';
 
 
 
@@ -11,6 +12,7 @@ export default function RootLayout() {
 
   return (
     <>
+    <AlertNotificationRoot>
       <StatusBar style="dark" backgroundColor="white" translucent={false} />
       <AuthProvider>
         <Stack screenOptions={{ headerShown: false }}>
@@ -18,6 +20,7 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthProvider>
+      </AlertNotificationRoot>
     </>
   );
 }

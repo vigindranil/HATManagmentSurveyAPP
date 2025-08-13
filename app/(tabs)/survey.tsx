@@ -11,7 +11,7 @@ import {
   Image,
   Button,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,12 +27,14 @@ import {
   CircleCheck as CheckCircle,
   Circle,
   Calendar,
+  XCircle, // CHANGED: Added the XCircle icon for the remove button
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { SelectList } from 'react-native-dropdown-select-list';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { ALERT_TYPE, Dialog, Toast } from 'react-native-alert-notification';
 // import { saveSurveyUser } from '@/api';
 import {
   getAllDistrictList,
@@ -115,7 +117,7 @@ export default function Survey() {
   const [mouzaOptions, setMouzaOptions] = useState([]);
   const [user, setUser] = useState<any>(null);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
-  
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -125,7 +127,7 @@ export default function Survey() {
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2) {
             updateField('user_id', String(parsedUser2.UserID));
-            setUser(parsedUser2); 
+            setUser(parsedUser2);
           }
         }
       } catch (error) {
@@ -159,99 +161,437 @@ export default function Survey() {
   const steps = [
     {
       title: 'Application Metadata',
-      icon: User, color: '#059669', bgColor: '#F0FDF4', description: 'Owner information',
+      icon: User,
+      color: '#059669',
+      bgColor: '#F0FDF4',
+      description: 'Owner information',
       fields: [
-        { key: 'licenseType', label: 'License Type', required: true, placeholder: 'Select license type' },
-        { key: 'applicationStatus', label: 'Application Status', required: true, placeholder: 'Select Application Status' },
-        { key: 'applicationFor', label: 'Application For', required: true, placeholder: 'Select Application For' },
-        { key: 'usesType', label: 'Uses Type', required: true, placeholder: 'Select Uses Type' },
+        {
+          key: 'licenseType',
+          label: 'License Type',
+          required: true,
+          placeholder: 'Select license type',
+        },
+        {
+          key: 'applicationStatus',
+          label: 'Application Status',
+          required: true,
+          placeholder: 'Select Application Status',
+        },
+        {
+          key: 'applicationFor',
+          label: 'Application For',
+          required: true,
+          placeholder: 'Select Application For',
+        },
+        {
+          key: 'usesType',
+          label: 'Uses Type',
+          required: true,
+          placeholder: 'Select Uses Type',
+        },
       ],
     },
     {
       title: 'Applicant Details',
-      icon: FileText, color: '#F59E42', bgColor: '#FFF7ED', description: 'Applicant personal and document information',
+      icon: FileText,
+      color: '#F59E42',
+      bgColor: '#FFF7ED',
+      description: 'Applicant personal and document information',
       fields: [
-        { key: 'name', label: 'Name', required: true, placeholder: 'Enter applicant name', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'guardian_name', label: "Guardian's Name", required: true, placeholder: "Enter father's/husband's name", showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'address', label: 'Address', required: true, placeholder: 'Enter address', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'mobile', label: 'Mobile Number', required: true, placeholder: 'Enter mobile number', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'citizenship', label: 'Citizenship', required: true, placeholder: 'Enter citizenship', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'pin_code', label: 'Pin Code', required: true, placeholder: 'Enter pin code', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'documentTypes', label: 'Document Type', required: true, placeholder: 'Select document type', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'document_image', label: 'Document Image', required: true, placeholder: 'Upload document image', showFor: ['new', 'existing', 'transfer', 'rent'], type: 'image' },
-        { key: 'pan', label: 'PAN', required: true, placeholder: 'Enter PAN number', showFor: ['new', 'existing', 'transfer', 'rent'] },
-        { key: 'pan_image', label: 'PAN Image', required: true, placeholder: 'Upload PAN image', showFor: ['new', 'existing', 'transfer', 'rent'], type: 'image' },
-        { key: 'residential_certificate_attached', label: 'Residential Certificate (Attachment)', required: false, placeholder: 'Upload residential certificate', showFor: ['new', 'existing', 'transfer', 'rent'], type: 'image' },
-        { key: 'trade_license_attached', label: 'Trade License (Attachment)', required: false, placeholder: 'Upload trade license', showFor: ['new', 'existing', 'transfer', 'rent'], type: 'image' },
-        { key: 'previous_license_no', label: 'Previous License No', required: true, placeholder: 'Enter previous license number ', showFor: ['existing'] },
-        { key: 'license_expiry_date', label: 'License Expiry Date', required: true, placeholder: 'Select license expiry date ', showFor: ['existing'], type: 'date' },
-        { key: 'property_tax_payment_to_year', label: 'Property Tax Paid Up To Year', required: true, placeholder: 'Enter year up to which property tax is paid ', showFor: ['existing'] },
-        { key: 'is_within_family', label: 'Is Within Family', required: true, placeholder: 'Is the transfer within family?', showFor: ['transfer'], type: 'dropdown' },
-        { key: 'transfer_relationship', label: 'Transfer Relationship', required: true, placeholder: 'Specify relationship ', showFor: ['transfer'], dependsOn: { key: 'is_within_family', value: false } },
-        { key: 'land_transfer_explanation', label: 'Land Transfer Explanation', required: true, placeholder: 'Explain land transfer ', showFor: ['transfer'] },
-        { key: 'occupy', label: 'Occupy', required: true, placeholder: 'Is property occupied? ', showFor: ['transfer'] },
-        { key: 'occupy_from_year', label: 'Occupy From Year', required: true, placeholder: 'Enter year of occupation ', showFor: ['transfer'] },
-        { key: 'present_occupier_name', label: 'Present Occupier Name', required: true, placeholder: 'Enter present occupier name', showFor: ['transfer'] },
-        { key: 'occupier_guardian_name', label: "Occupier's Guardian Name", required: true, placeholder: "Enter occupier's guardian name ", showFor: ['transfer'] },
-        { key: 'affidavit_attached', label: 'Affidavit (Attachment)', required: true, placeholder: 'Upload affidavit', showFor: ['transfer'], type: 'image' },
-        { key: 'adsr_name', label: 'ADSR Name', required: true, placeholder: 'Enter ADSR name', showFor: ['transfer'] },
-        { key: 'warision_certificate_attached', label: 'Warision Certificate (Attachment)', required: true, placeholder: 'Upload warision certificate ', showFor: ['transfer'], type: 'image' },
-        { key: 'death_certificate_attached', label: 'Death Certificate (Attachment)', required: true, placeholder: 'Upload death certificate ', showFor: ['transfer'], type: 'image' },
-        { key: 'noc_legal_heirs_attached', label: 'NOC Legal Heirs (Attachment)', required: true, placeholder: 'Upload NOC from legal heirs', showFor: ['transfer'], type: 'image' },
-        { key: 'is_same_owner', label: 'Is Same Owner', required: true, placeholder: 'Is the owner the same?', showFor: ['rent'], type: 'dropdown' },
-        { key: 'rented_to_whom', label: 'Rented To Whom', required: true, placeholder: 'Enter the name of the person/entity rented to', showFor: ['rent'], dependsOn: { key: 'is_same_owner', value: false } },
+        {
+          key: 'name',
+          label: 'Name',
+          required: true,
+          placeholder: 'Enter applicant name',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'guardian_name',
+          label: "Guardian's Name",
+          required: true,
+          placeholder: "Enter father's/husband's name",
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'address',
+          label: 'Address',
+          required: true,
+          placeholder: 'Enter address',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'mobile',
+          label: 'Mobile Number',
+          required: true,
+          placeholder: 'Enter mobile number',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'citizenship',
+          label: 'Citizenship',
+          required: true,
+          placeholder: 'Enter citizenship',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'pin_code',
+          label: 'Pin Code',
+          required: true,
+          placeholder: 'Enter pin code',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'documentTypes',
+          label: 'Document Type',
+          required: true,
+          placeholder: 'Select document type',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'document_image',
+          label: 'Document Image',
+          required: true,
+          placeholder: 'Upload document image',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+          type: 'image',
+        },
+        {
+          key: 'pan',
+          label: 'PAN',
+          required: true,
+          placeholder: 'Enter PAN number',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+        },
+        {
+          key: 'pan_image',
+          label: 'PAN Image',
+          required: true,
+          placeholder: 'Upload PAN image',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+          type: 'image',
+        },
+        {
+          key: 'residential_certificate_attached',
+          label: 'Residential Certificate (Attachment)',
+          required: false,
+          placeholder: 'Upload residential certificate',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+          type: 'image',
+        },
+        {
+          key: 'trade_license_attached',
+          label: 'Trade License (Attachment)',
+          required: false,
+          placeholder: 'Upload trade license',
+          showFor: ['new', 'existing', 'transfer', 'rent'],
+          type: 'image',
+        },
+        {
+          key: 'previous_license_no',
+          label: 'Previous License No',
+          required: true,
+          placeholder: 'Enter previous license number ',
+          showFor: ['existing'],
+        },
+        {
+          key: 'license_expiry_date',
+          label: 'License Expiry Date',
+          required: true,
+          placeholder: 'Select license expiry date ',
+          showFor: ['existing'],
+          type: 'date',
+        },
+        {
+          key: 'property_tax_payment_to_year',
+          label: 'Property Tax Paid Up To Year',
+          required: true,
+          placeholder: 'Enter year up to which property tax is paid ',
+          showFor: ['existing'],
+        },
+        {
+          key: 'is_within_family',
+          label: 'Is Within Family',
+          required: true,
+          placeholder: 'Is the transfer within family?',
+          showFor: ['transfer'],
+          type: 'dropdown',
+        },
+        {
+          key: 'transfer_relationship',
+          label: 'Transfer Relationship',
+          required: true,
+          placeholder: 'Specify relationship ',
+          showFor: ['transfer'],
+          dependsOn: { key: 'is_within_family', value: false },
+        },
+        {
+          key: 'land_transfer_explanation',
+          label: 'Land Transfer Explanation',
+          required: true,
+          placeholder: 'Explain land transfer ',
+          showFor: ['transfer'],
+        },
+        {
+          key: 'occupy',
+          label: 'Occupy',
+          required: true,
+          placeholder: 'Is property occupied? ',
+          showFor: ['transfer'],
+        },
+        {
+          key: 'occupy_from_year',
+          label: 'Occupy From Year',
+          required: true,
+          placeholder: 'Enter year of occupation ',
+          showFor: ['transfer'],
+        },
+        {
+          key: 'present_occupier_name',
+          label: 'Present Occupier Name',
+          required: true,
+          placeholder: 'Enter present occupier name',
+          showFor: ['transfer'],
+        },
+        {
+          key: 'occupier_guardian_name',
+          label: "Occupier's Guardian Name",
+          required: true,
+          placeholder: "Enter occupier's guardian name ",
+          showFor: ['transfer'],
+        },
+        {
+          key: 'affidavit_attached',
+          label: 'Affidavit (Attachment)',
+          required: true,
+          placeholder: 'Upload affidavit',
+          showFor: ['transfer'],
+          type: 'image',
+        },
+        {
+          key: 'adsr_name',
+          label: 'ADSR Name',
+          required: true,
+          placeholder: 'Enter ADSR name',
+          showFor: ['transfer'],
+        },
+        {
+          key: 'warision_certificate_attached',
+          label: 'Warision Certificate (Attachment)',
+          required: true,
+          placeholder: 'Upload warision certificate ',
+          showFor: ['transfer'],
+          type: 'image',
+        },
+        {
+          key: 'death_certificate_attached',
+          label: 'Death Certificate (Attachment)',
+          required: true,
+          placeholder: 'Upload death certificate ',
+          showFor: ['transfer'],
+          type: 'image',
+        },
+        {
+          key: 'noc_legal_heirs_attached',
+          label: 'NOC Legal Heirs (Attachment)',
+          required: true,
+          placeholder: 'Upload NOC from legal heirs',
+          showFor: ['transfer'],
+          type: 'image',
+        },
+        {
+          key: 'is_same_owner',
+          label: 'Is Same Owner',
+          required: true,
+          placeholder: 'Is the owner the same?',
+          showFor: ['rent'],
+          type: 'dropdown',
+        },
+        {
+          key: 'rented_to_whom',
+          label: 'Rented To Whom',
+          required: true,
+          placeholder: 'Enter the name of the person/entity rented to',
+          showFor: ['rent'],
+          dependsOn: { key: 'is_same_owner', value: false },
+        },
       ],
     },
     {
       title: 'Plot Details',
-      icon: Building, color: '#0891B2', bgColor: '#F0FDFA', description: 'Property information',
+      icon: Building,
+      color: '#0891B2',
+      bgColor: '#F0FDFA',
+      description: 'Property information',
       fields: [
-        { key: 'district_id', label: 'District', required: true, placeholder: 'Select district' },
-        { key: 'police_station_id', label: 'Police Station', required: true, placeholder: 'Select police station' },
-        { key: 'hat_id', label: 'Hat', required: true, placeholder: 'Select hat' },
-        { key: 'mouza_id', label: 'Mouza', required: true, placeholder: 'Select mouza' },
-        { key: 'stall_no', label: 'Stall No', required: true, placeholder: 'Enter stall number' },
-        { key: 'holding_no', label: 'Holding No', required: true, placeholder: 'Enter holding number' },
-        { key: 'jl_no', label: 'JL No', required: true, placeholder: 'Enter JL number' },
-        { key: 'khatian_no', label: 'Khatian No', required: true, placeholder: 'Enter khatian number' },
-        { key: 'plot_no', label: 'Plot No', required: true, placeholder: 'Enter plot number' },
-        { key: 'area_dom_sqft', label: 'Area (Domestic, sqft)', required: true, placeholder: 'Enter domestic area in sqft' },
-        { key: 'area_com_sqft', label: 'Area (Commercial, sqft)', required: true, placeholder: 'Enter commercial area in sqft' },
-        { key: 'direction', label: 'Direction', required: true, placeholder: 'Enter direction' },
-        { key: 'latitude', label: 'Latitude', required: true, placeholder: 'Enter latitude (optional)' },
-        { key: 'longitude', label: 'Longitude', required: true, placeholder: 'Enter longitude (optional)' },
-        { key: 'sketch_map_attached', label: 'Sketch Map (Attachment)', required: false, placeholder: 'Upload sketch map', type: 'image' },
-        { key: 'user_id', label: 'User ID', required: true, placeholder: 'Enter user ID' },
+        {
+          key: 'district_id',
+          label: 'District',
+          required: true,
+          placeholder: 'Select district',
+        },
+        {
+          key: 'police_station_id',
+          label: 'Police Station',
+          required: true,
+          placeholder: 'Select police station',
+        },
+        {
+          key: 'hat_id',
+          label: 'Hat',
+          required: true,
+          placeholder: 'Select hat',
+        },
+        {
+          key: 'mouza_id',
+          label: 'Mouza',
+          required: true,
+          placeholder: 'Select mouza',
+        },
+        {
+          key: 'stall_no',
+          label: 'Stall No',
+          required: true,
+          placeholder: 'Enter stall number',
+        },
+        {
+          key: 'holding_no',
+          label: 'Holding No',
+          required: true,
+          placeholder: 'Enter holding number',
+        },
+        {
+          key: 'jl_no',
+          label: 'JL No',
+          required: true,
+          placeholder: 'Enter JL number',
+        },
+        {
+          key: 'khatian_no',
+          label: 'Khatian No',
+          required: true,
+          placeholder: 'Enter khatian number',
+        },
+        {
+          key: 'plot_no',
+          label: 'Plot No',
+          required: true,
+          placeholder: 'Enter plot number',
+        },
+        {
+          key: 'area_dom_sqft',
+          label: 'Area (Domestic, sqft)',
+          required: true,
+          placeholder: 'Enter domestic area in sqft',
+        },
+        {
+          key: 'area_com_sqft',
+          label: 'Area (Commercial, sqft)',
+          required: true,
+          placeholder: 'Enter commercial area in sqft',
+        },
+        {
+          key: 'direction',
+          label: 'Direction',
+          required: true,
+          placeholder: 'Enter direction',
+        },
+        {
+          key: 'latitude',
+          label: 'Latitude',
+          required: true,
+          placeholder: 'Enter latitude (optional)',
+        },
+        {
+          key: 'longitude',
+          label: 'Longitude',
+          required: true,
+          placeholder: 'Enter longitude (optional)',
+        },
+        {
+          key: 'sketch_map_attached',
+          label: 'Sketch Map (Attachment)',
+          required: false,
+          placeholder: 'Upload sketch map',
+          type: 'image',
+        },
+        {
+          key: 'user_id',
+          label: 'User ID',
+          required: true,
+          placeholder: 'Enter user ID',
+        },
       ],
     },
     {
       title: 'Images',
-      icon: FileText, color: '#0EA5E9', bgColor: '#E0F2FE', description: 'Upload images related to the stall',
+      icon: FileText,
+      color: '#0EA5E9',
+      bgColor: '#E0F2FE',
+      description: 'Upload images related to the stall',
       fields: [
-        { key: 'stall_image1', label: 'Image 1', required: false, placeholder: 'Tap to select or take a photo', type: 'image' },
-        { key: 'stall_image2', label: 'Image 2', required: false, placeholder: 'Tap to select or take a photo', type: 'image' },
+        {
+          key: 'stall_image1',
+          label: 'Image 1',
+          required: false,
+          placeholder: 'Tap to select or take a photo',
+          type: 'image',
+        },
+        {
+          key: 'stall_image2',
+          label: 'Image 2',
+          required: false,
+          placeholder: 'Tap to select or take a photo',
+          type: 'image',
+        },
       ],
     },
     {
       title: 'Remarks',
-      icon: MessageSquare, color: '#EA580C', bgColor: '#FFF7ED', description: 'Additional notes',
+      icon: MessageSquare,
+      color: '#EA580C',
+      bgColor: '#FFF7ED',
+      description: 'Additional notes',
       fields: [
-        { key: 'remarks', label: 'Remarks', required: true, placeholder: 'Enter any additional remarks or notes', multiline: true },
+        {
+          key: 'remarks',
+          label: 'Remarks',
+          required: true,
+          placeholder: 'Enter any additional remarks or notes',
+          multiline: true,
+        },
       ],
     },
   ];
 
-  const licenseType = [ { key: '1', value: 'Holding' }, { key: '2', value: 'Stall' } ];
-  const applicationStatus = [ { key: '1', value: 'New' }, { key: '2', value: 'Existing' }, { key: '3', value: 'Transfer' }, { key: '4', value: 'Rent' } ];
-  const usesType = [ { key: '1', value: 'Commercial' }, { key: '2', value: 'Residential cum Commercial' } ];
-  const applicationFor = [ { key: '1', value: 'Self' }, { key: '2', value: 'Family' }, { key: '3', value: 'Others' } ];
+  const licenseType = [
+    { key: '1', value: 'Holding' },
+    { key: '2', value: 'Stall' },
+  ];
+  const applicationStatus = [
+    { key: '1', value: 'New' },
+    { key: '2', value: 'Existing' },
+    { key: '3', value: 'Transfer' },
+    { key: '4', value: 'Rent' },
+  ];
+  const usesType = [
+    { key: '1', value: 'Commercial' },
+    { key: '2', value: 'Residential cum Commercial' },
+  ];
+  const applicationFor = [
+    { key: '1', value: 'Self' },
+    { key: '2', value: 'Family' },
+    { key: '3', value: 'Others' },
+  ];
 
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
         const districtList = await getAllDistrictList();
         setDistrict(districtList?.data || []);
-      } catch (error) { console.error('Error fetching districts:', error); }
+      } catch (error) {
+        console.error('Error fetching districts:', error);
+      }
     };
     fetchDistricts();
   }, []);
@@ -261,25 +601,47 @@ export default function Survey() {
   };
 
   const handleImagePick = async (fieldKey: string) => {
-    Alert.alert('📸 Select Image Source','How would you like to add your image?',
+    Alert.alert(
+      '📸 Select Image Source',
+      'How would you like to add or change the image?',
       [
         {
           text: '📷 Camera',
           onPress: async () => {
-            const result = await ImagePicker.launchCameraAsync({ mediaTypes:  ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.7 });
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.7,
+            });
             if (!result.canceled && result.assets) {
-              const base64Image = await handleSignatureSaved(result.assets[0].uri);
-              updateField(fieldKey, { uri: result.assets[0].uri, base: base64Image });
+              const base64Image = await handleSignatureSaved(
+                result.assets[0].uri
+              );
+              updateField(fieldKey, {
+                uri: result.assets[0].uri,
+                base: base64Image,
+              });
             }
           },
         },
         {
           text: '🖼️ Device Gallery',
           onPress: async () => {
-            const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes:  ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.7 });
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.7,
+            });
             if (!result.canceled && result.assets) {
-                const base64Image = await handleSignatureSaved(result.assets[0].uri);
-                updateField(fieldKey, { uri: result.assets[0].uri, base: base64Image });
+              const base64Image = await handleSignatureSaved(
+                result.assets[0].uri
+              );
+              updateField(fieldKey, {
+                uri: result.assets[0].uri,
+                base: base64Image,
+              });
             }
           },
         },
@@ -287,15 +649,22 @@ export default function Survey() {
       ]
     );
   };
-  
+
   const validateStep = () => {
     const currentStepData = steps[currentStep];
-    const statusMap: { [key: string]: string } = { '1': 'new', '2': 'existing', '3': 'transfer', '4': 'rent' };
-    const currentStatusString = statusMap[surveyData.applicationStatus as string];
+    const statusMap: { [key: string]: string } = {
+      '1': 'new',
+      '2': 'existing',
+      '3': 'transfer',
+      '4': 'rent',
+    };
+    const currentStatusString =
+      statusMap[surveyData.applicationStatus as string];
 
     for (const field of currentStepData.fields) {
       if (!field.required) continue;
-      if (field.showFor && !field.showFor.includes(currentStatusString)) continue;
+      if (field.showFor && !field.showFor.includes(currentStatusString))
+        continue;
       if (field.dependsOn) {
         const { key, value: requiredValue } = field.dependsOn;
         if (surveyData[key as keyof SurveyData] !== requiredValue) {
@@ -304,7 +673,11 @@ export default function Survey() {
       }
 
       const fieldValue = surveyData[field.key as keyof SurveyData];
-      if (fieldValue === null || fieldValue === undefined || fieldValue === '') {
+      if (
+        fieldValue === null ||
+        fieldValue === undefined ||
+        fieldValue === ''
+      ) {
         Alert.alert('Validation Error', `${field.label} is required`);
         return false;
       }
@@ -312,8 +685,31 @@ export default function Survey() {
     return true;
   };
 
-  const numericFields = [ 'mobile', 'pin_code', 'previous_license_no', 'property_tax_payment_to_year', 'occupy_from_year', 'stall_no', 'holding_no', 'jl_no', 'khatian_no', 'plot_no', 'area_dom_sqft', 'area_com_sqft', 'latitude', 'longitude' ];
-  const formatDropdownData = (data: any[], keyField: string, valueField: string) => (data || []).map(item => ({ key: String(item[keyField]), value: String(item[valueField]) }));
+  const numericFields = [
+    'mobile',
+    'pin_code',
+    'previous_license_no',
+    'property_tax_payment_to_year',
+    'occupy_from_year',
+    'stall_no',
+    'holding_no',
+    'jl_no',
+    'khatian_no',
+    'plot_no',
+    'area_dom_sqft',
+    'area_com_sqft',
+    'latitude',
+    'longitude',
+  ];
+  const formatDropdownData = (
+    data: any[],
+    keyField: string,
+    valueField: string
+  ) =>
+    (data || []).map((item) => ({
+      key: String(item[keyField]),
+      value: String(item[valueField]),
+    }));
 
   const nextStep = async () => {
     if (validateStep()) {
@@ -323,24 +719,60 @@ export default function Survey() {
         setIsSaving(true);
         try {
           const response = await saveSurveyOnline(surveyData);
-          const message = response.status === 0
-            ? `Survey submitted successfully! Your application number is ${response?.data?.applicationNumber}`
-            : 'Survey submission failed. Please try again.';
+          const message =
+            response.status === 0
+              ? `Survey submitted successfully! Your application number is ${response?.data?.applicationNumber}`
+              : 'Survey submission failed. Please try again.';
 
-          Alert.alert('Success', message, [
-            { 
-              text: 'OK', 
-              onPress: () => { 
-                if(response.status === 0) { 
-                  setSurveyData({ user_id: user ? String(user.UserID) : '' }); 
-                  setCurrentStep(0); 
+          if (response.status === 0) {
+            Dialog.show({
+              type: ALERT_TYPE.SUCCESS,
+              title: '🎉 Success!',
+              textBody: message,
+              button: 'OK',
+              onHide: () => {
+                if (response.status === 0) {
+                  setSurveyData({ user_id: user ? String(user.UserID) : '' });
+                  setCurrentStep(0);
                 }
-              }
-            },
-          ]);
+              },
+              autoClose: false,
+              closeOnOverlayTap: true,
+              style: styles.dialogbox, // Center the alert vertically
+            });
+          } else {
+            Dialog.show({
+              type: ALERT_TYPE.WARNING,
+              title: '❌ Error!',
+              textBody: message,
+              button: 'OK',
+              onHide: () => {
+                if (response.status === 0) {
+                  setSurveyData({ user_id: user ? String(user.UserID) : '' });
+                  setCurrentStep(0);
+                }
+              },
+              autoClose: false,
+              closeOnOverlayTap: true,
+              style: styles.dialogbox, // Center the alert vertically
+            });
+          }
         } catch (error) {
-          console.error("Submission Error:", error);
-          Alert.alert('Error', 'Failed to save survey. Please try again.');
+          console.error('Submission Error:', error);
+          // Alert.alert('Error', 'Failed to save survey. Please try again.');
+          Dialog.show({
+            type: ALERT_TYPE.WARNING,
+            title: '🎉 Error!',
+            textBody: `Failed to save survey. Please try again.`,
+            button: 'OK',
+            onHide: () => {
+              setSurveyData({ user_id: user ? String(user.UserID) : '' });
+              setCurrentStep(0);
+            },
+            autoClose: false,
+            closeOnOverlayTap: true,
+            style: styles.dialogbox,
+          });
         } finally {
           setIsSaving(false);
         }
@@ -348,28 +780,22 @@ export default function Survey() {
     }
   };
 
-  // CHANGED: This function now clears both the current and previous page data on back navigation.
   const prevStep = () => {
     if (currentStep > 0) {
       const newData = { ...surveyData };
-      
-      // Get fields from the current step (the one we are leaving)
       const fieldsToClearCurrent = steps[currentStep].fields;
-      
-      // Get fields from the previous step (the one we are going to)
       const fieldsToClearPrevious = steps[currentStep - 1].fields;
-      
-      // Combine both lists of fields to be cleared
-      const allFieldsToClear = [...fieldsToClearCurrent, ...fieldsToClearPrevious];
-
-      allFieldsToClear.forEach(field => {
-        // Always preserve the user_id
+      const allFieldsToClear = [
+        ...fieldsToClearCurrent,
+        ...fieldsToClearPrevious,
+      ];
+      allFieldsToClear.forEach((field) => {
         if (field.key !== 'user_id') {
-          delete (newData as Partial<SurveyData>)[field.key as keyof SurveyData];
+          delete (newData as Partial<SurveyData>)[
+            field.key as keyof SurveyData
+          ];
         }
       });
-
-      // Update state with the cleared data before navigating back
       setSurveyData(newData);
       setCurrentStep(currentStep - 1);
     }
@@ -377,112 +803,275 @@ export default function Survey() {
 
   const handleDistrictChange = async (selectedKey: any) => {
     updateField('district_id', selectedKey);
-    updateField('police_station_id', ''); updateField('mouza_id', ''); updateField('hat_id', '');
-    setPoliceStationOptions([]); setMouzaOptions([]); setHaatAllDetailsOptions([]);
+    updateField('police_station_id', '');
+    updateField('mouza_id', '');
+    updateField('hat_id', '');
+    setPoliceStationOptions([]);
+    setMouzaOptions([]);
+    setHaatAllDetailsOptions([]);
     try {
       const [policeStations, haatDetails] = await Promise.all([
-          getPoliceStationsByDistrictId(selectedKey),
-          getAllHaatDetailsByDistrictID(selectedKey)
+        getPoliceStationsByDistrictId(selectedKey),
+        getAllHaatDetailsByDistrictID(selectedKey),
       ]);
       setHaatAllDetailsOptions(haatDetails?.data || []);
       setPoliceStationOptions(policeStations?.data || []);
-    } catch (error) { console.error('Error fetching dependent district data:', error); }
+    } catch (error) {
+      console.error('Error fetching dependent district data:', error);
+    }
   };
 
   const handlePoliceStationChange = async (selectedKey: any) => {
     updateField('police_station_id', selectedKey);
-    updateField('mouza_id', ''); setMouzaOptions([]);
+    updateField('mouza_id', '');
+    setMouzaOptions([]);
     try {
       const mouzaList = await getMouzaListByThanaID(selectedKey);
       setMouzaOptions(mouzaList?.data || []);
-    } catch (error) { console.error('Error fetching mouza data:', error); }
+    } catch (error) {
+      console.error('Error fetching mouza data:', error);
+    }
   };
-  
+
   const renderField = (field: any) => {
-    const statusMap: { [key: string]: string } = { '1': 'new', '2': 'existing', '3': 'transfer', '4': 'rent' };
-    const currentStatusString = statusMap[surveyData.applicationStatus as string];
-  
-    if (field.showFor && !field.showFor.includes(currentStatusString)) return null;
-    if (field.dependsOn && surveyData[field.dependsOn.key as keyof SurveyData] !== field.dependsOn.value) return null;
-  
+    const statusMap: { [key: string]: string } = {
+      '1': 'new',
+      '2': 'existing',
+      '3': 'transfer',
+      '4': 'rent',
+    };
+    const currentStatusString =
+      statusMap[surveyData.applicationStatus as string];
+
+    if (field.showFor && !field.showFor.includes(currentStatusString))
+      return null;
+    if (
+      field.dependsOn &&
+      surveyData[field.dependsOn.key as keyof SurveyData] !==
+        field.dependsOn.value
+    )
+      return null;
+
     const value = surveyData[field.key as keyof SurveyData];
-    
-    const dropdownDataMap: Record<string, any[]> = { licenseType, applicationStatus, applicationFor, usesType, documentTypes };
-    
+
+    const dropdownDataMap: Record<string, any[]> = {
+      licenseType,
+      applicationStatus,
+      applicationFor,
+      usesType,
+      documentTypes,
+    };
+
     if (dropdownDataMap[field.key] || field.type === 'dropdown') {
-        const data = field.type === 'dropdown' ? yesNoOptions : dropdownDataMap[field.key];
-        return (
-            <View key={field.key} style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-              <View style={styles.inputContainer}>
-                <SelectList setSelected={(val: any) => updateField(field.key, val === 'true' ? true : val === 'false' ? false : val)} placeholder={field.placeholder} data={data} save="key" search={false} boxStyles={{ borderWidth: 0, elevation: 0, shadowOpacity: 0, backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 14 }} dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }} dropdownTextStyles={{ fontWeight: 'bold', color: '#111827', fontSize: 16 }} dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 10, marginHorizontal: 10 }} inputStyles={{ color: '#000000', fontSize: 16 }}/>
-              </View>
-            </View>
-        );
-    }
-    
-    if (['district_id', 'police_station_id', 'mouza_id', 'hat_id'].includes(field.key)) {
-        let data: any[] = [], handler = (val: any) => updateField(field.key, val);
-        if (field.key === 'district_id') { data = formatDropdownData(district, 'district_id', 'district_name'); handler = handleDistrictChange; } 
-        else if (field.key === 'police_station_id') { data = formatDropdownData(policeStationOptions, 'thana_id', 'thana_name'); handler = handlePoliceStationChange; } 
-        else if (field.key === 'mouza_id') { data = formatDropdownData(mouzaOptions, 'mouza_id', 'mouza_name'); } 
-        else if (field.key === 'hat_id') { data = formatDropdownData(haatAllDetailsOptions, 'haat_id', 'haat_name'); }
-        return (
-          <View key={field.key} style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-            <View style={styles.inputContainer}>
-              <SelectList setSelected={handler} placeholder={field.placeholder} data={data} save="key" search={true} boxStyles={{ borderWidth: 0, elevation: 0, shadowOpacity: 0, backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 14 }} dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }} dropdownTextStyles={{ fontWeight: 'bold', color: '#111827', fontSize: 16 }} dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 10, marginHorizontal: 10 }} inputStyles={{ color: '#000000', fontSize: 16 }}/>
-            </View>
-          </View>
-        );
-    }
-
-    if (field.type === 'image') {
-       const imageValue = value as ImageFieldType;
-        return (
-          <View key={field.key} style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-            <TouchableOpacity style={styles.imagePickerButton} onPress={() => handleImagePick(field.key)}>
-              {imageValue?.uri ? <Image source={{ uri: imageValue.uri }} style={styles.imagePreview} /> : <Text style={styles.imagePickerText}>{field.placeholder}</Text>}
-            </TouchableOpacity>
-          </View>
-        );
-    }
-
-    if (field.type === 'date') {
-        return (
-            <View key={field.key} style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-                <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowPicker(true)}>
-                    <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
-                    <Text style={{ color: '#111827', fontSize: 16 }}>{value ? new Date(value as string).toLocaleDateString() : 'Select Date'}</Text>
-                </TouchableOpacity>
-                {showPicker && ( <DateTimePicker value={value ? new Date(value as string) : date} mode="date" display="default" onChange={(e, d) => { setShowPicker(false); if (d) updateField(field.key, d.toISOString().split('T')[0]); }} /> )}
-            </View>
-        )
-    }
-
-    return (
+      const data =
+        field.type === 'dropdown' ? yesNoOptions : dropdownDataMap[field.key];
+      return (
         <View key={field.key} style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
+          <Text style={styles.fieldLabel}>
+            {field.label}{' '}
+            {field.required && <Text style={styles.required}>*</Text>}
+          </Text>
           <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.textInput, field.multiline && styles.textInputMultiline]}
-              value={value as string || ''}
+            <SelectList
+              setSelected={(val: any) =>
+                updateField(
+                  field.key,
+                  val === 'true' ? true : val === 'false' ? false : val
+                )
+              }
               placeholder={field.placeholder}
-              editable={field.key !== 'user_id'}
-              placeholderTextColor="#9CA3AF"
-              keyboardType={numericFields.includes(field.key) ? 'numeric' : 'default'}
-              maxLength={field.key === 'mobile' ? 10 : undefined}
-              multiline={field.multiline}
-              numberOfLines={field.multiline ? 4 : 1}
-              onChangeText={(text) => updateField(field.key, text)}
+              data={data}
+              save="key"
+              search={false}
+              boxStyles={{
+                borderWidth: 0,
+                elevation: 0,
+                shadowOpacity: 0,
+                backgroundColor: 'transparent',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+              }}
+              dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }}
+              dropdownTextStyles={{
+                fontWeight: 'bold',
+                color: '#111827',
+                fontSize: 16,
+              }}
+              dropdownItemStyles={{
+                borderBottomWidth: 1,
+                borderBottomColor: '#E5E7EB',
+                paddingVertical: 10,
+                marginHorizontal: 10,
+              }}
+              inputStyles={{ color: '#000000', fontSize: 16 }}
             />
           </View>
         </View>
+      );
+    }
+
+    if (
+      ['district_id', 'police_station_id', 'mouza_id', 'hat_id'].includes(
+        field.key
+      )
+    ) {
+      let data: any[] = [],
+        handler = (val: any) => updateField(field.key, val);
+      if (field.key === 'district_id') {
+        data = formatDropdownData(district, 'district_id', 'district_name');
+        handler = handleDistrictChange;
+      } else if (field.key === 'police_station_id') {
+        data = formatDropdownData(
+          policeStationOptions,
+          'thana_id',
+          'thana_name'
+        );
+        handler = handlePoliceStationChange;
+      } else if (field.key === 'mouza_id') {
+        data = formatDropdownData(mouzaOptions, 'mouza_id', 'mouza_name');
+      } else if (field.key === 'hat_id') {
+        data = formatDropdownData(
+          haatAllDetailsOptions,
+          'haat_id',
+          'haat_name'
+        );
+      }
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>
+            {field.label}{' '}
+            {field.required && <Text style={styles.required}>*</Text>}
+          </Text>
+          <View style={styles.inputContainer}>
+            <SelectList
+              setSelected={handler}
+              placeholder={field.placeholder}
+              data={data}
+              save="key"
+              search={true}
+              boxStyles={{
+                borderWidth: 0,
+                elevation: 0,
+                shadowOpacity: 0,
+                backgroundColor: 'transparent',
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+              }}
+              dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }}
+              dropdownTextStyles={{
+                fontWeight: 'bold',
+                color: '#111827',
+                fontSize: 16,
+              }}
+              dropdownItemStyles={{
+                borderBottomWidth: 1,
+                borderBottomColor: '#E5E7EB',
+                paddingVertical: 10,
+                marginHorizontal: 10,
+              }}
+              inputStyles={{ color: '#000000', fontSize: 16 }}
+            />
+          </View>
+        </View>
+      );
+    }
+
+    // CHANGED: This block now renders the remove button when an image is present
+    if (field.type === 'image') {
+      const imageValue = value as ImageFieldType;
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>
+            {field.label}{' '}
+            {field.required && <Text style={styles.required}>*</Text>}
+          </Text>
+          <TouchableOpacity
+            style={styles.imagePickerButton}
+            onPress={() => handleImagePick(field.key)}
+          >
+            {imageValue?.uri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image
+                  source={{ uri: imageValue.uri }}
+                  style={styles.imagePreview}
+                />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => updateField(field.key, null)}
+                >
+                  <XCircle size={28} color="#DC2626" fill="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.imagePickerText}>{field.placeholder}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (field.type === 'date') {
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>
+            {field.label}{' '}
+            {field.required && <Text style={styles.required}>*</Text>}
+          </Text>
+          <TouchableOpacity
+            style={styles.datePickerButton}
+            onPress={() => setShowPicker(true)}
+          >
+            <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
+            <Text style={{ color: '#111827', fontSize: 16 }}>
+              {value
+                ? new Date(value as string).toLocaleDateString()
+                : 'Select Date'}
+            </Text>
+          </TouchableOpacity>
+          {showPicker && (
+            <DateTimePicker
+              value={value ? new Date(value as string) : date}
+              mode="date"
+              display="default"
+              onChange={(e, d) => {
+                setShowPicker(false);
+                if (d) updateField(field.key, d.toISOString().split('T')[0]);
+              }}
+            />
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <View key={field.key} style={styles.fieldContainer}>
+        <Text style={styles.fieldLabel}>
+          {field.label}{' '}
+          {field.required && <Text style={styles.required}>*</Text>}
+        </Text>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={[
+              styles.textInput,
+              field.multiline && styles.textInputMultiline,
+            ]}
+            value={(value as string) || ''}
+            placeholder={field.placeholder}
+            editable={field.key !== 'user_id'}
+            placeholderTextColor="#9CA3AF"
+            keyboardType={
+              numericFields.includes(field.key) ? 'numeric' : 'default'
+            }
+            maxLength={field.key === 'mobile' ? 10 : undefined}
+            multiline={field.multiline}
+            numberOfLines={field.multiline ? 4 : 1}
+            onChangeText={(text) => updateField(field.key, text)}
+          />
+        </View>
+      </View>
     );
   };
-  
+
   const renderStepIndicator = () => {
     return (
       <View style={styles.stepIndicator}>
@@ -492,10 +1081,33 @@ export default function Survey() {
           const StepIcon = step.icon;
           return (
             <View key={index} style={styles.stepItem}>
-              <View style={[ styles.stepCircle, isCompleted && styles.stepCompleted, isCurrent && [styles.stepCurrent, { backgroundColor: step.color }] ]}>
-                {isCompleted ? <CheckCircle size={16} color="#ffffff" /> : <StepIcon size={16} color={isCurrent ? '#ffffff' : '#9CA3AF'} />}
+              <View
+                style={[
+                  styles.stepCircle,
+                  isCompleted && styles.stepCompleted,
+                  isCurrent && [
+                    styles.stepCurrent,
+                    { backgroundColor: step.color },
+                  ],
+                ]}
+              >
+                {isCompleted ? (
+                  <CheckCircle size={16} color="#ffffff" />
+                ) : (
+                  <StepIcon
+                    size={16}
+                    color={isCurrent ? '#ffffff' : '#9CA3AF'}
+                  />
+                )}
               </View>
-              {index < steps.length - 1 && <View style={[ styles.stepLine, isCompleted && styles.stepLineCompleted ]} />}
+              {index < steps.length - 1 && (
+                <View
+                  style={[
+                    styles.stepLine,
+                    isCompleted && styles.stepLineCompleted,
+                  ]}
+                />
+              )}
             </View>
           );
         })}
@@ -508,34 +1120,98 @@ export default function Survey() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={[currentStepData.color, currentStepData.color + '90']} style={styles.header}>
+      <LinearGradient
+        colors={[currentStepData.color, currentStepData.color + '90']}
+        style={styles.header}
+      >
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
-            <View style={[ styles.headerIcon, { backgroundColor: currentStepData.bgColor } ]}><StepIcon size={24} color={currentStepData.color} /></View>
-            <View style={styles.headerText}><Text style={styles.headerTitle}>{currentStepData.title}</Text><Text style={styles.headerSubtitle}>{currentStepData.description}</Text></View>
+            <View
+              style={[
+                styles.headerIcon,
+                { backgroundColor: currentStepData.bgColor },
+              ]}
+            >
+              <StepIcon size={24} color={currentStepData.color} />
+            </View>
+            <View style={styles.headerText}>
+              <Text style={styles.headerTitle}>{currentStepData.title}</Text>
+              <Text style={styles.headerSubtitle}>
+                {currentStepData.description}
+              </Text>
+            </View>
           </View>
-          <View style={styles.stepCounter}><Text style={styles.stepCounterText}>{currentStep + 1}/{steps.length}</Text></View>
+          <View style={styles.stepCounter}>
+            <Text style={styles.stepCounterText}>
+              {currentStep + 1}/{steps.length}
+            </Text>
+          </View>
         </View>
         <View style={styles.progressContainer}>
-          <View style={styles.progressBar}><View style={[ styles.progressFill, { width: `${((currentStep + 1) / steps.length) * 100}%` } ]} /></View>
-          <Text style={styles.progressText}>{Math.round(((currentStep + 1) / steps.length) * 100)}% Complete</Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${((currentStep + 1) / steps.length) * 100}%` },
+              ]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            {Math.round(((currentStep + 1) / steps.length) * 100)}% Complete
+          </Text>
         </View>
       </LinearGradient>
 
       <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView ref={scrollViewRef} style={styles.formContainer} keyboardShouldPersistTaps="handled">
-              <View style={styles.formContent}>{currentStepData.fields.map(renderField)}</View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.formContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.formContent}>
+            {currentStepData.fields.map(renderField)}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.buttonContainer}>
-        {currentStep > 0 && <TouchableOpacity style={styles.prevButton} onPress={prevStep}><ChevronLeft size={20} color="#6B7280" /><Text style={styles.prevButtonText}>Previous</Text></TouchableOpacity>}
-        <TouchableOpacity style={[ styles.nextButton, currentStep === 0 && styles.nextButtonFull ]} onPress={nextStep} disabled={isSaving}>
-          <LinearGradient colors={isSaving ? ['#9CA3AF', '#6B7280'] : [currentStepData.color, currentStepData.color + 'CC']} style={styles.nextButtonGradient}>
-            <Text style={styles.nextButtonText}>{isSaving ? 'Saving...' : currentStep === steps.length - 1 ? 'Submit Survey' : 'Continue'}</Text>
-            {currentStep < steps.length - 1 && <ChevronRight size={20} color="#ffffff" />}
+        {currentStep > 0 && (
+          <TouchableOpacity style={styles.prevButton} onPress={prevStep}>
+            <ChevronLeft size={20} color="#6B7280" />
+            <Text style={styles.prevButtonText}>Previous</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.nextButton,
+            currentStep === 0 && styles.nextButtonFull,
+          ]}
+          onPress={nextStep}
+          disabled={isSaving}
+        >
+          <LinearGradient
+            colors={
+              isSaving
+                ? ['#9CA3AF', '#6B7280']
+                : [currentStepData.color, currentStepData.color + 'CC']
+            }
+            style={styles.nextButtonGradient}
+          >
+            <Text style={styles.nextButtonText}>
+              {isSaving
+                ? 'Saving...'
+                : currentStep === steps.length - 1
+                ? 'Submit Survey'
+                : 'Continue'}
+            </Text>
+            {currentStep < steps.length - 1 && (
+              <ChevronRight size={20} color="#ffffff" />
+            )}
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -731,6 +1407,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
+  dialogbox: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    top: 0,
+  },
   prevButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -791,10 +1472,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   imagePreview: {
-    width: '70%',
-    height: 130,
-    borderRadius: 8,
-    marginTop: 2,
+    width: '100%', // Changed to fill container
+    height: '100%', // Changed to fill container
+    borderRadius: 6, // Match the button's radius
   },
   imagePickerText: {
     color: '#9CA3AF',
@@ -818,5 +1498,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 6,
+  },
+  // ADDED: These new styles handle the remove button on the image
+  imagePreviewContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 14,
   },
 });
