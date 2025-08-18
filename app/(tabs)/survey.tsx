@@ -12,6 +12,7 @@ import {
   Button,
   Platform,
   KeyboardAvoidingView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,7 +28,7 @@ import {
   CircleCheck as CheckCircle,
   Circle,
   Calendar,
-  XCircle, // CHANGED: Added the XCircle icon for the remove button
+  XCircle,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
@@ -44,7 +45,7 @@ import {
   saveSurveyOnline,
 } from '@/api';
 import * as ImagePicker from 'expo-image-picker';
-import handleSignatureSaved from '@/utils/base64';
+import * as Location from 'expo-location';
 
 const { width } = Dimensions.get('window');
 
@@ -93,7 +94,7 @@ interface SurveyData {
   license_expiry_date: string;
   property_tax_payment_to_year: string;
   land_transfer_explanation: string;
-  occupy: string;
+  occupy: boolean;
   occupy_from_year: string;
   present_occupier_name: string;
   occupier_guardian_name: string;
@@ -107,6 +108,8 @@ interface SurveyData {
   sketch_map_attached: string;
   stall_image1: string;
   stall_image2: string;
+  land_valuation_document: string;
+  land_valuation_amount: string;
 }
 
 export default function Survey() {
@@ -147,6 +150,8 @@ export default function Survey() {
   const [isSaving, setIsSaving] = useState(false);
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  // CHANGED: This state now tracks WHICH image is loading
+  const [loadingImage, setLoadingImage] = useState<string | null>(null);
 
   const yesNoOptions = [
     { key: 'true', value: 'Yes' },
@@ -204,56 +209,56 @@ export default function Survey() {
           label: 'Name',
           required: true,
           placeholder: 'Enter applicant name',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'guardian_name',
           label: "Guardian's Name",
           required: true,
           placeholder: "Enter father's/husband's name",
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'address',
           label: 'Address',
           required: true,
           placeholder: 'Enter address',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'mobile',
           label: 'Mobile Number',
           required: true,
           placeholder: 'Enter mobile number',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer', ],
         },
         {
           key: 'citizenship',
           label: 'Citizenship',
           required: true,
           placeholder: 'Enter citizenship',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'pin_code',
           label: 'Pin Code',
           required: true,
           placeholder: 'Enter pin code',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'documentTypes',
           label: 'Document Type',
           required: true,
           placeholder: 'Select document type',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'document_image',
           label: 'Document Image',
-          required: true,
+          required: false,
           placeholder: 'Upload document image',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
           type: 'image',
         },
         {
@@ -261,14 +266,14 @@ export default function Survey() {
           label: 'PAN',
           required: true,
           placeholder: 'Enter PAN number',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'pan_image',
           label: 'PAN Image',
-          required: true,
+          required: false,
           placeholder: 'Upload PAN image',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
           type: 'image',
         },
         {
@@ -276,7 +281,7 @@ export default function Survey() {
           label: 'Residential Certificate (Attachment)',
           required: false,
           placeholder: 'Upload residential certificate',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
           type: 'image',
         },
         {
@@ -284,7 +289,7 @@ export default function Survey() {
           label: 'Trade License (Attachment)',
           required: false,
           placeholder: 'Upload trade license',
-          showFor: ['new', 'existing', 'transfer', 'rent'],
+          showFor: ['new', 'existing', 'transfer'],
           type: 'image',
         },
         {
@@ -323,7 +328,7 @@ export default function Survey() {
           required: true,
           placeholder: 'Specify relationship ',
           showFor: ['transfer'],
-          dependsOn: { key: 'is_within_family', value: false },
+          dependsOn: { key: 'is_within_family', value: true },
         },
         {
           key: 'land_transfer_explanation',
@@ -334,10 +339,11 @@ export default function Survey() {
         },
         {
           key: 'occupy',
-          label: 'Occupy',
+          label: 'Is property occupied?',
           required: true,
-          placeholder: 'Is property occupied? ',
+          placeholder: 'Select an option',
           showFor: ['transfer'],
+          type: 'dropdown',
         },
         {
           key: 'occupy_from_year',
@@ -345,6 +351,7 @@ export default function Survey() {
           required: true,
           placeholder: 'Enter year of occupation ',
           showFor: ['transfer'],
+          dependsOn: { key: 'occupy', value: true },
         },
         {
           key: 'present_occupier_name',
@@ -352,6 +359,7 @@ export default function Survey() {
           required: true,
           placeholder: 'Enter present occupier name',
           showFor: ['transfer'],
+          dependsOn: { key: 'occupy', value: true },
         },
         {
           key: 'occupier_guardian_name',
@@ -359,11 +367,12 @@ export default function Survey() {
           required: true,
           placeholder: "Enter occupier's guardian name ",
           showFor: ['transfer'],
+          dependsOn: { key: 'occupy', value: true },
         },
         {
           key: 'affidavit_attached',
           label: 'Affidavit (Attachment)',
-          required: true,
+          required: false,
           placeholder: 'Upload affidavit',
           showFor: ['transfer'],
           type: 'image',
@@ -378,7 +387,7 @@ export default function Survey() {
         {
           key: 'warision_certificate_attached',
           label: 'Warision Certificate (Attachment)',
-          required: true,
+          required: false,
           placeholder: 'Upload warision certificate ',
           showFor: ['transfer'],
           type: 'image',
@@ -386,7 +395,7 @@ export default function Survey() {
         {
           key: 'death_certificate_attached',
           label: 'Death Certificate (Attachment)',
-          required: true,
+          required: false,
           placeholder: 'Upload death certificate ',
           showFor: ['transfer'],
           type: 'image',
@@ -394,27 +403,27 @@ export default function Survey() {
         {
           key: 'noc_legal_heirs_attached',
           label: 'NOC Legal Heirs (Attachment)',
-          required: true,
+          required: false,
           placeholder: 'Upload NOC from legal heirs',
           showFor: ['transfer'],
           type: 'image',
         },
-        {
-          key: 'is_same_owner',
-          label: 'Is Same Owner',
-          required: true,
-          placeholder: 'Is the owner the same?',
-          showFor: ['rent'],
-          type: 'dropdown',
-        },
-        {
-          key: 'rented_to_whom',
-          label: 'Rented To Whom',
-          required: true,
-          placeholder: 'Enter the name of the person/entity rented to',
-          showFor: ['rent'],
-          dependsOn: { key: 'is_same_owner', value: false },
-        },
+        // {
+        //   key: 'is_same_owner',
+        //   label: 'Is Same Owner',
+        //   required: true,
+        //   placeholder: 'Is the owner the same?',
+        //   showFor: ['rent'],
+        //   type: 'dropdown',
+        // },
+        // {
+        //   key: 'rented_to_whom',
+        //   label: 'Rented To Whom',
+        //   required: true,
+        //   placeholder: 'Enter the name of the person/entity rented to',
+        //   showFor: ['rent'],
+        //   dependsOn: { key: 'is_same_owner', value: false },
+        // },
       ],
     },
     {
@@ -499,14 +508,14 @@ export default function Survey() {
         {
           key: 'latitude',
           label: 'Latitude',
-          required: true,
-          placeholder: 'Enter latitude (optional)',
+          required: false,
+          placeholder: 'Enter latitude ',
         },
         {
           key: 'longitude',
           label: 'Longitude',
-          required: true,
-          placeholder: 'Enter longitude (optional)',
+          required: false,
+          placeholder: 'Enter longitude',
         },
         {
           key: 'sketch_map_attached',
@@ -514,6 +523,19 @@ export default function Survey() {
           required: false,
           placeholder: 'Upload sketch map',
           type: 'image',
+        },
+        {
+          key: 'land_valuation_document',
+          label: 'Land Valuation document (Attachment)',
+          required: true,
+          placeholder: 'Upload Land Valuation document',
+          type: 'image',
+        },
+        {
+          key: 'land_valuation_amount',
+          label: 'Land Valuation Amount',
+          required: true,
+          placeholder: 'Enter Amount',
         },
         {
           key: 'user_id',
@@ -535,14 +557,14 @@ export default function Survey() {
           label: 'Image 1',
           required: false,
           placeholder: 'Tap to select or take a photo',
-          type: 'image',
+          type: 'images',
         },
         {
           key: 'stall_image2',
           label: 'Image 2',
           required: false,
           placeholder: 'Tap to select or take a photo',
-          type: 'image',
+          type: 'images',
         },
       ],
     },
@@ -572,7 +594,7 @@ export default function Survey() {
     { key: '1', value: 'New' },
     { key: '2', value: 'Existing' },
     { key: '3', value: 'Transfer' },
-    { key: '4', value: 'Rent' },
+  
   ];
   const usesType = [
     { key: '1', value: 'Commercial' },
@@ -597,8 +619,129 @@ export default function Survey() {
   }, []);
 
   const updateField = (key: string, value: any) => {
-    setSurveyData((prev) => ({ ...prev, [key]: value }));
+    setSurveyData((prev) => {
+      const newData = { ...prev, [key]: value };
+      steps.forEach((step) => {
+        step.fields.forEach((field) => {
+          if (
+            field.dependsOn &&
+            field.dependsOn.key === key &&
+            value !== field.dependsOn.value
+          ) {
+            delete (newData as Partial<SurveyData>)[
+              field.key as keyof SurveyData
+            ];
+          }
+        });
+      });
+      return newData;
+    });
   };
+
+  const handleStallImagePick = async (fieldKey: string) => {
+    Alert.alert(
+      '📸 Select Image Source',
+      'How would you like to add or change the image?',
+      [
+        {
+          text: '📷 Camera',
+          onPress: async () => {
+            try {
+              setLoadingImage(fieldKey);
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+                exif: true,
+              });
+  
+              if (!result.canceled && result.assets) {
+                const asset = result.assets[0];
+                let latitude = asset.exif?.GPSLatitude;
+                let longitude = asset.exif?.GPSLongitude;
+  
+                if (!latitude || !longitude) {
+                  const { status } =
+                    await Location.requestForegroundPermissionsAsync();
+                  if (status !== 'granted') {
+                    Dialog.show({
+                      type: ALERT_TYPE.WARNING,
+                      title: '❌ Permission denied!',
+                      textBody: 'Location permission is required.',
+                      button: 'OK',
+                    });
+                    return;
+                  }
+                  const loc = await Location.getCurrentPositionAsync({});
+                  latitude = loc.coords.latitude;
+                  longitude = loc.coords.longitude;
+                }
+  
+                updateField(fieldKey, { uri: asset.uri });
+                updateField('latitude', String(latitude));
+                updateField('longitude', String(longitude));
+              }
+            } catch (err) {
+              console.error('Camera pick failed:', err);
+            } finally {
+              setLoadingImage(null);
+            }
+          },
+        },
+        {
+          text: '🖼️ Device Gallery',
+          onPress: async () => {
+            try {
+              setLoadingImage(fieldKey);
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+                exif: true,
+              });
+  
+              if (!result.canceled && result.assets) {
+                const asset = result.assets[0];
+                let latitude = asset.exif?.GPSLatitude;
+                let longitude = asset.exif?.GPSLongitude;
+  
+                if (!latitude || !longitude) {
+                  const { status } =
+                    await Location.requestForegroundPermissionsAsync();
+                  if (status !== 'granted') {
+                    Dialog.show({
+                      type: ALERT_TYPE.WARNING,
+                      title: '❌ Permission denied!',
+                      textBody: 'Location permission is required.',
+                      button: 'OK',
+                    });
+                    return;
+                  }
+                  const loc = await Location.getCurrentPositionAsync({});
+                  latitude = loc.coords.latitude;
+                  longitude = loc.coords.longitude;
+                }
+  
+                updateField(fieldKey, { uri: asset.uri });
+                updateField('latitude', String(latitude));
+                updateField('longitude', String(longitude));
+              }
+            } catch (err) {
+              console.error('Gallery pick failed:', err);
+            } finally {
+              setLoadingImage(null);
+            }
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+
+  console.log('surveydata', surveyData);
 
   const handleImagePick = async (fieldKey: string) => {
     Alert.alert(
@@ -608,40 +751,48 @@ export default function Survey() {
         {
           text: '📷 Camera',
           onPress: async () => {
-            const result = await ImagePicker.launchCameraAsync({
-              mediaTypes: ['images'],
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.7,
-            });
-            if (!result.canceled && result.assets) {
-              const base64Image = await handleSignatureSaved(
-                result.assets[0].uri
-              );
-              updateField(fieldKey, {
-                uri: result.assets[0].uri,
-                base: base64Image,
+            try {
+              setLoadingImage(fieldKey);
+              const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
               });
+  
+              if (!result.canceled && result.assets) {
+                updateField(fieldKey, {
+                  uri: result.assets[0].uri,
+                });
+              }
+            } catch (err) {
+              console.error('Camera pick failed:', err);
+            } finally {
+              setLoadingImage(null);
             }
           },
         },
         {
           text: '🖼️ Device Gallery',
           onPress: async () => {
-            const result = await ImagePicker.launchImageLibraryAsync({
-              mediaTypes: ['images'],
-              allowsEditing: true,
-              aspect: [4, 3],
-              quality: 0.7,
-            });
-            if (!result.canceled && result.assets) {
-              const base64Image = await handleSignatureSaved(
-                result.assets[0].uri
-              );
-              updateField(fieldKey, {
-                uri: result.assets[0].uri,
-                base: base64Image,
+            try {
+              setLoadingImage(fieldKey);
+              const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
               });
+  
+              if (!result.canceled && result.assets) {
+                updateField(fieldKey, {
+                  uri: result.assets[0].uri,
+                });
+              }
+            } catch (err) {
+              console.error('Gallery pick failed:', err);
+            } finally {
+              setLoadingImage(null);
             }
           },
         },
@@ -656,12 +807,16 @@ export default function Survey() {
       '1': 'new',
       '2': 'existing',
       '3': 'transfer',
-      '4': 'rent',
+      // '4': 'rent',
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];
 
     for (const field of currentStepData.fields) {
+      if (field.key === 'holding_no' && surveyData.licenseType !== '1')
+        continue;
+      if (field.key === 'stall_no' && surveyData.licenseType !== '2') continue;
+
       if (!field.required) continue;
       if (field.showFor && !field.showFor.includes(currentStatusString))
         continue;
@@ -700,6 +855,7 @@ export default function Survey() {
     'area_com_sqft',
     'latitude',
     'longitude',
+    'land_valuation_amount',
   ];
   const formatDropdownData = (
     data: any[],
@@ -738,7 +894,6 @@ export default function Survey() {
               },
               autoClose: false,
               closeOnOverlayTap: true,
-              style: styles.dialogbox, // Center the alert vertically
             });
           } else {
             Dialog.show({
@@ -754,12 +909,10 @@ export default function Survey() {
               },
               autoClose: false,
               closeOnOverlayTap: true,
-              style: styles.dialogbox, // Center the alert vertically
             });
           }
         } catch (error) {
           console.error('Submission Error:', error);
-          // Alert.alert('Error', 'Failed to save survey. Please try again.');
           Dialog.show({
             type: ALERT_TYPE.WARNING,
             title: '🎉 Error!',
@@ -771,7 +924,6 @@ export default function Survey() {
             },
             autoClose: false,
             closeOnOverlayTap: true,
-            style: styles.dialogbox,
           });
         } finally {
           setIsSaving(false);
@@ -842,6 +994,11 @@ export default function Survey() {
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];
+
+    if (field.key === 'holding_no' && surveyData.licenseType !== '1')
+      return null;
+    if (field.key === 'stall_no' && surveyData.licenseType !== '2') return null;
+    if (field.key === 'user_id' || field.key === 'latitude' || field.key === 'longitude') return null;
 
     if (field.showFor && !field.showFor.includes(currentStatusString))
       return null;
@@ -976,7 +1133,6 @@ export default function Survey() {
       );
     }
 
-    // CHANGED: This block now renders the remove button when an image is present
     if (field.type === 'image') {
       const imageValue = value as ImageFieldType;
       return (
@@ -989,7 +1145,49 @@ export default function Survey() {
             style={styles.imagePickerButton}
             onPress={() => handleImagePick(field.key)}
           >
-            {imageValue?.uri ? (
+            {loadingImage === field.key ? (
+              <View style={styles.imagePreviewContainer}>
+                <ActivityIndicator size="large" color="#2563EB" /> 
+              </View>
+            ) : imageValue?.uri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image
+                  source={{ uri: imageValue.uri }}
+                  style={styles.imagePreview}
+                />
+                <TouchableOpacity
+                  style={styles.removeImageButton}
+                  onPress={() => updateField(field.key, null)}
+                >
+                  <XCircle size={28} color="#DC2626" fill="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.imagePickerText}>{field.placeholder}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+
+    if (field.type === 'images') {
+      const imageValue = value as ImageFieldType;
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>
+            {field.label}{' '}
+            {field.required && <Text style={styles.required}>*</Text>}
+          </Text>
+          <TouchableOpacity
+            style={styles.imagePickerButton}
+            onPress={() => handleStallImagePick(field.key)}
+          >
+            {loadingImage === field.key ? (
+              <View style={styles.imagePreviewContainer}>
+                <ActivityIndicator size="large" color="#2563EB" /> 
+              </View>
+            ) : imageValue?.uri ? (
               <View style={styles.imagePreviewContainer}>
                 <Image
                   source={{ uri: imageValue.uri }}
@@ -1063,6 +1261,7 @@ export default function Survey() {
               numericFields.includes(field.key) ? 'numeric' : 'default'
             }
             maxLength={field.key === 'mobile' ? 10 : undefined}
+            autoCapitalize={field.key === 'pan' ? 'characters' : 'none'}
             multiline={field.multiline}
             numberOfLines={field.multiline ? 4 : 1}
             onChangeText={(text) => updateField(field.key, text)}
@@ -1410,7 +1609,6 @@ const styles = StyleSheet.create({
   dialogbox: {
     justifyContent: 'center',
     alignItems: 'center',
-    top: 0,
   },
   prevButton: {
     flexDirection: 'row',
@@ -1472,9 +1670,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   imagePreview: {
-    width: '100%', // Changed to fill container
-    height: '100%', // Changed to fill container
-    borderRadius: 6, // Match the button's radius
+    width: '100%',
+    height: '100%',
+    borderRadius: 6,
   },
   imagePickerText: {
     color: '#9CA3AF',
@@ -1499,7 +1697,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  // ADDED: These new styles handle the remove button on the image
   imagePreviewContainer: {
     width: '100%',
     height: '100%',

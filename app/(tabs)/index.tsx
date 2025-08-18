@@ -29,6 +29,11 @@ import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getDashboardCountBySurveyUserID } from '../../api';
+
+
+
 
 const { width } = Dimensions.get('window');
 
@@ -36,8 +41,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { isOnline, pendingSurveys, getAllSurveys } = useOfflineStorage();
   const [totalSurveys, setTotalSurveys] = React.useState(156);
-
-
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
   React.useEffect(() => {
     loadSurveyStats();
@@ -48,52 +52,62 @@ export default function Dashboard() {
     setTotalSurveys(allSurveys.length);
   };
 
-
-
- 
-
-  
-
-  
-
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user1 = await AsyncStorage.getItem('user');
+        if (user1) {
+          const parsedUser = JSON.parse(user1);
+          const parsedUser2 = JSON.parse(parsedUser.userDetails);
+          if (parsedUser2) {
+            const Data = await getDashboardCountBySurveyUserID(parsedUser2.UserID);
+            setDashboardData(Data?.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data', error);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const stats = [
     {
       icon: FileText,
       title: 'Total Surveys',
-      value: totalSurveys.toString(),
-      change: '+12%',
+      value: dashboardData?.total_survey?.toString() ?? '0',
+      // change: '+12%',
       color: '#2563EB',
       bgColor: '#EFF6FF',
       description: 'This month',
     },
     {
       icon: MapPin,
-      title: 'Locations',
-      value: '24',
-      change: '+3',
+      title: 'Today Survey',
+      value: dashboardData?.today_survey?.toString() ?? '0',
+      // change: '+3',
       color: '#0891B2',
       bgColor: '#F0FDFA',
-      description: 'Active areas',
-    },
-    {
-      icon: Users,
-      title: 'Respondents',
-      value: '89',
-      change: '+18%',
-      color: '#059669',
-      bgColor: '#F0FDF4',
-      description: 'Unique users',
+      description: 'This Month',
     },
     {
       icon: Clock,
-      title: 'Pending Sync',
-      value: pendingSurveys.length.toString(),
-      change: pendingSurveys.length > 0 ? 'Offline' : 'Synced',
-      color: '#DC2626',
-      bgColor: '#FEF2F2',
-      description: 'Offline surveys',
+      title: 'Total Pending Verification',
+      value: dashboardData?.total_pending_verification?.toString() ?? '0',
+      // change: '+18%',
+      color: '#059669',
+      bgColor: '#F0FDF4',
+      description: 'Users',
     },
+    // {
+    //   icon: Clock,
+    //   title: 'Pending Sync',
+    //   value: pendingSurveys.length.toString(),
+    //   change: pendingSurveys.length > 0 ? 'Offline' : 'Synced',
+    //   color: '#DC2626',
+    //   bgColor: '#FEF2F2',
+    //   description: 'Offline surveys',
+    // },
   ];
 
   const recentSurveys = [
@@ -241,11 +255,11 @@ export default function Dashboard() {
                     >
                       <stat.icon size={20} color={stat.color} />
                     </View>
-                    <View style={styles.statChange}>
+                    {/* <View style={styles.statChange}>
                       <Text style={[styles.changeText, { color: stat.color }]}>
                         {stat.change}
                       </Text>
-                    </View>
+                    </View> */}
                   </View>
                   <Text style={styles.statValue}>{stat.value}</Text>
                   <Text style={styles.statTitle}>{stat.title}</Text>
