@@ -25,9 +25,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 
-import { authentication } from '../api';
+import { authentication } from '../../api';
 import { useAuth } from '@/context/auth-context';
-
 
 const { width, height } = Dimensions.get('window');
 
@@ -67,6 +66,8 @@ export default function Login() {
       }),
     ]).start();
   }, []);
+
+ 
 
   const handleLogin = async () => {
     if (!username || !password) {

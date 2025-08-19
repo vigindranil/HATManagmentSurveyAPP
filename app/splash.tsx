@@ -54,7 +54,7 @@ export default function Splash() {
 
     // Navigate to login after 3 seconds
     const timer = setTimeout(() => {
-      router.replace('/');
+      router.replace('/(auth)/login');
     }, 3000);
 
     return () => clearTimeout(timer);

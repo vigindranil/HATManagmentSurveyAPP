@@ -36,7 +36,8 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
       appState.current = nextAppState;
     });
 
-    handleInitialPrompt();
+    checkAndRequestLocation(); // Changed from handleInitialPrompt
+
     return () => {
       subscription.remove();
       stopAllWatchers();
@@ -46,6 +47,18 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
   const exitApp = () => {
     if (Platform.OS === 'android') BackHandler.exitApp();
     else Alert.alert('Exit App', 'Please close the app manually.');
+  };
+
+  // New function to check status before showing any alerts
+  const checkAndRequestLocation = async () => {
+    const hasServicesEnabled = await Location.hasServicesEnabledAsync();
+    const { status } = await Location.getForegroundPermissionsAsync();
+
+    if (hasServicesEnabled && status === 'granted') {
+      verifyLocation(); // If everything is okay, go straight to verification
+    } else {
+      handleInitialPrompt(); // Otherwise, show the initial prompt
+    }
   };
 
   const handleInitialPrompt = () => {

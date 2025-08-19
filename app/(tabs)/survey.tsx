@@ -46,6 +46,8 @@ import {
 } from '@/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { useAuth } from '@/context/auth-context';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -120,6 +122,7 @@ export default function Survey() {
   const [mouzaOptions, setMouzaOptions] = useState([]);
   const [user, setUser] = useState<any>(null);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
+  const { setUser: setUsers, setIsAuthenticated } = useAuth();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -230,7 +233,7 @@ export default function Survey() {
           label: 'Mobile Number',
           required: true,
           placeholder: 'Enter mobile number',
-          showFor: ['new', 'existing', 'transfer', ],
+          showFor: ['new', 'existing', 'transfer'],
         },
         {
           key: 'citizenship',
@@ -594,7 +597,6 @@ export default function Survey() {
     { key: '1', value: 'New' },
     { key: '2', value: 'Existing' },
     { key: '3', value: 'Transfer' },
-  
   ];
   const usesType = [
     { key: '1', value: 'Commercial' },
@@ -611,8 +613,16 @@ export default function Survey() {
       try {
         const districtList = await getAllDistrictList();
         setDistrict(districtList?.data || []);
-      } catch (error) {
-        console.error('Error fetching districts:', error);
+      } catch (err) {
+        const error = err as any;
+        if (error.status === 401) {
+          setUsers(null);
+          setIsAuthenticated(false);
+          await AsyncStorage.removeItem('user');
+          router.replace('/(auth)/login'); // 👈 handle it here
+        } else {
+          console.error('Error fetching districts:', error.message);
+        }
       }
     };
     fetchDistricts();
@@ -655,12 +665,12 @@ export default function Survey() {
                 quality: 0.7,
                 exif: true,
               });
-  
+
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
                 let latitude = asset.exif?.GPSLatitude;
                 let longitude = asset.exif?.GPSLongitude;
-  
+
                 if (!latitude || !longitude) {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
@@ -677,7 +687,7 @@ export default function Survey() {
                   latitude = loc.coords.latitude;
                   longitude = loc.coords.longitude;
                 }
-  
+
                 updateField(fieldKey, { uri: asset.uri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
@@ -701,12 +711,12 @@ export default function Survey() {
                 quality: 0.7,
                 exif: true,
               });
-  
+
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
                 let latitude = asset.exif?.GPSLatitude;
                 let longitude = asset.exif?.GPSLongitude;
-  
+
                 if (!latitude || !longitude) {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
@@ -723,7 +733,7 @@ export default function Survey() {
                   latitude = loc.coords.latitude;
                   longitude = loc.coords.longitude;
                 }
-  
+
                 updateField(fieldKey, { uri: asset.uri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
@@ -740,8 +750,7 @@ export default function Survey() {
     );
   };
 
-
-  console.log('surveydata', surveyData);
+ 
 
   const handleImagePick = async (fieldKey: string) => {
     Alert.alert(
@@ -759,7 +768,7 @@ export default function Survey() {
                 aspect: [4, 3],
                 quality: 0.7,
               });
-  
+
               if (!result.canceled && result.assets) {
                 updateField(fieldKey, {
                   uri: result.assets[0].uri,
@@ -783,7 +792,7 @@ export default function Survey() {
                 aspect: [4, 3],
                 quality: 0.7,
               });
-  
+
               if (!result.canceled && result.assets) {
                 updateField(fieldKey, {
                   uri: result.assets[0].uri,
@@ -911,8 +920,17 @@ export default function Survey() {
               closeOnOverlayTap: true,
             });
           }
-        } catch (error) {
-          console.error('Submission Error:', error);
+        } catch (err) {
+          // console.error('Submission Error:', error);
+          const error = err as any;
+          if (error.status === 401) {
+            setUsers(null);
+            setIsAuthenticated(false);
+            await AsyncStorage.removeItem('user');
+            router.replace('/(auth)/login'); // 👈 handle it here
+          } else {
+            console.error('Submission Error:', error.message);
+          }
           Dialog.show({
             type: ALERT_TYPE.WARNING,
             title: '🎉 Error!',
@@ -968,8 +986,17 @@ export default function Survey() {
       ]);
       setHaatAllDetailsOptions(haatDetails?.data || []);
       setPoliceStationOptions(policeStations?.data || []);
-    } catch (error) {
-      console.error('Error fetching dependent district data:', error);
+    } catch (err) {
+      // console.error('Error fetching dependent district data:', error);
+      const error = err as any;
+      if (error.status === 401) {
+        setUsers(null);
+        setIsAuthenticated(false);
+        await AsyncStorage.removeItem('user');
+        router.replace('/(auth)/login'); // 👈 handle it here
+      } else {
+        console.error('Error fetching dependent district data:', error.message);
+      }
     }
   };
 
@@ -980,8 +1007,17 @@ export default function Survey() {
     try {
       const mouzaList = await getMouzaListByThanaID(selectedKey);
       setMouzaOptions(mouzaList?.data || []);
-    } catch (error) {
-      console.error('Error fetching mouza data:', error);
+    } catch (err) {
+      // console.error('Error fetching mouza data:', error);
+      const error = err as any;
+      if (error.status === 401) {
+        setUsers(null);
+        setIsAuthenticated(false);
+        await AsyncStorage.removeItem('user');
+        router.replace('/(auth)/login'); // 👈 handle it here
+      } else {
+        console.error('Error fetching mouza data:', error.message);
+      }
     }
   };
 
@@ -990,7 +1026,7 @@ export default function Survey() {
       '1': 'new',
       '2': 'existing',
       '3': 'transfer',
-      '4': 'rent',
+      // '4': 'rent',
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];
@@ -998,7 +1034,12 @@ export default function Survey() {
     if (field.key === 'holding_no' && surveyData.licenseType !== '1')
       return null;
     if (field.key === 'stall_no' && surveyData.licenseType !== '2') return null;
-    if (field.key === 'user_id' || field.key === 'latitude' || field.key === 'longitude') return null;
+    if (
+      field.key === 'user_id' ||
+      field.key === 'latitude' ||
+      field.key === 'longitude'
+    )
+      return null;
 
     if (field.showFor && !field.showFor.includes(currentStatusString))
       return null;
@@ -1134,7 +1175,10 @@ export default function Survey() {
     }
 
     if (field.type === 'image') {
-      const imageValue = value as ImageFieldType;
+      // const imageValue = value as ImageFieldType;
+      const imageValue = (typeof value === 'object' && value !== null && 'uri' in value)
+    ? (value as ImageFieldType)
+    : undefined;
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
@@ -1147,7 +1191,7 @@ export default function Survey() {
           >
             {loadingImage === field.key ? (
               <View style={styles.imagePreviewContainer}>
-                <ActivityIndicator size="large" color="#2563EB" /> 
+                <ActivityIndicator size="large" color="#2563EB" />
               </View>
             ) : imageValue?.uri ? (
               <View style={styles.imagePreviewContainer}>
@@ -1170,9 +1214,11 @@ export default function Survey() {
       );
     }
 
-
     if (field.type === 'images') {
-      const imageValue = value as ImageFieldType;
+      // const imageValue = value as ImageFieldType;
+      const imageValue = (typeof value === 'object' && value !== null && 'uri' in value)
+    ? (value as ImageFieldType)
+    : undefined;
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
@@ -1185,7 +1231,7 @@ export default function Survey() {
           >
             {loadingImage === field.key ? (
               <View style={styles.imagePreviewContainer}>
-                <ActivityIndicator size="large" color="#2563EB" /> 
+                <ActivityIndicator size="large" color="#2563EB" />
               </View>
             ) : imageValue?.uri ? (
               <View style={styles.imagePreviewContainer}>

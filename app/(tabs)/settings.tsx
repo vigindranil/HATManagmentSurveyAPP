@@ -1,15 +1,65 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import React, { useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Switch,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { User, Bell, Shield, Download, LogOut, ChevronRight, Globe, Moon, Database, Trash2 } from 'lucide-react-native';
+import {
+  User,
+  Bell,
+  Shield,
+  Download,
+  LogOut,
+  ChevronRight,
+  Globe,
+  Moon,
+  Database,
+  Trash2,
+} from 'lucide-react-native';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 import { SurveyList } from '@/components/SurveyList';
+import { useAuth } from '../../context/auth-context';
+import { router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function Settings() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [darkMode, setDarkMode] = React.useState(false);
+  // Create a user state to hold user information
+  const [userState, setUserState] = React.useState(null);
+
   const [showSurveyList, setShowSurveyList] = React.useState(false);
   const { clearAllData, pendingSurveys } = useOfflineStorage();
+  const { setIsAuthenticated, setUser } = useAuth();
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user1 = await AsyncStorage.getItem('user');
+        console.log(user1);
+        if (user1) {
+          const parsedUser = JSON.parse(user1);
+          const parsedUser2 = JSON.parse(parsedUser.userDetails);
+          if (parsedUser2) {
+            setUserState(parsedUser2);
+          }
+        }
+      } catch (error) {
+        console.error('Error Users data', error);
+        //   if (error.status === 401) {
+        //     logout(); // 👈 handle it here
+        //   } else {
+        //     console.error('Error fetching dashboard data', error);
+        // }
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleClearData = () => {
     Alert.alert(
@@ -25,24 +75,51 @@ export default function Settings() {
       ]
     );
   };
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          setUser(null);
+          setIsAuthenticated(false);
+          await AsyncStorage.removeItem('user');
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
+  };
+
   const settingsItems = [
     {
       section: 'Account',
       items: [
-        { icon: User, title: 'Profile Settings', subtitle: 'Edit your profile information', hasArrow: true },
-        { icon: Shield, title: 'Privacy & Security', subtitle: 'Manage your security settings', hasArrow: true },
-      ]
+        {
+          icon: User,
+          title: 'Profile Settings',
+          subtitle: 'Edit your profile information',
+          hasArrow: true,
+        },
+        {
+          icon: Shield,
+          title: 'Privacy & Security',
+          subtitle: 'Manage your security settings',
+          hasArrow: true,
+        },
+      ],
     },
     {
       section: 'Preferences',
       items: [
-        { 
-          icon: Bell, 
-          title: 'Notifications', 
+        {
+          icon: Bell,
+          title: 'Notifications',
           subtitle: 'Push notifications for updates',
           hasSwitch: true,
           switchValue: notificationsEnabled,
-          onSwitchToggle: setNotificationsEnabled
+          onSwitchToggle: setNotificationsEnabled,
         },
         {
           icon: Moon,
@@ -50,46 +127,63 @@ export default function Settings() {
           subtitle: 'Toggle dark theme',
           hasSwitch: true,
           switchValue: darkMode,
-          onSwitchToggle: setDarkMode
+          onSwitchToggle: setDarkMode,
         },
-        { icon: Globe, title: 'Language', subtitle: 'English (US)', hasArrow: true },
-      ]
+        {
+          icon: Globe,
+          title: 'Language',
+          subtitle: 'English (US)',
+          hasArrow: true,
+        },
+      ],
     },
     {
       section: 'Data & Storage',
       items: [
-        { 
-          icon: Database, 
-          title: 'Saved Surveys', 
-          subtitle: `${pendingSurveys.length} pending sync`, 
+        {
+          icon: Database,
+          title: 'Saved Surveys',
+          subtitle: `${pendingSurveys.length} pending sync`,
           hasArrow: true,
-          onPress: () => setShowSurveyList(true)
+          onPress: () => setShowSurveyList(true),
         },
-        { icon: Download, title: 'Data Export', subtitle: 'Export your survey data', hasArrow: true },
-        { 
-          icon: Trash2, 
-          title: 'Clear All Data', 
-          subtitle: 'Delete all saved surveys', 
-          hasArrow: true, 
+        {
+          icon: Download,
+          title: 'Data Export',
+          subtitle: 'Export your survey data',
+          hasArrow: true,
+        },
+        {
+          icon: Trash2,
+          title: 'Clear All Data',
+          subtitle: 'Delete all saved surveys',
+          hasArrow: true,
           danger: true,
-          onPress: handleClearData
+          onPress: handleClearData,
         },
-      ]
+      ],
     },
     {
       section: 'Support',
       items: [
-        { icon: LogOut, title: 'Sign Out', subtitle: 'Sign out of your account', hasArrow: true, danger: true },
-      ]
-    }
+        {
+          icon: LogOut,
+          title: 'Sign Out',
+          subtitle: 'Sign out of your account',
+          hasArrow: true,
+          danger: true,
+          onPress: handleSignOut,
+        },
+      ],
+    },
   ];
 
   const renderSettingItem = (item: any, index: number) => {
     return (
-      <TouchableOpacity 
-        key={index} 
+      <TouchableOpacity
+        key={index}
         style={styles.settingItem}
-        onPress={item.onPress}
+        onPress={item?.onPress}
       >
         <View style={styles.settingIcon}>
           <item.icon size={24} color={item.danger ? '#DC2626' : '#64748b'} />
@@ -108,9 +202,7 @@ export default function Settings() {
             thumbColor={item.switchValue ? '#2563EB' : '#9ca3af'}
           />
         )}
-        {item.hasArrow && (
-          <ChevronRight size={20} color="#9ca3af" />
-        )}
+        {item.hasArrow && <ChevronRight size={20} color="#9ca3af" />}
       </TouchableOpacity>
     );
   };
@@ -143,7 +235,7 @@ export default function Settings() {
             <Text style={styles.profileInitials}>JD</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>John Doe</Text>
+            <Text style={styles.profileName}>{userState?.UserFullName}</Text>
             <Text style={styles.profileEmail}>john.doe@example.com</Text>
           </View>
           <TouchableOpacity style={styles.editProfile}>
@@ -156,7 +248,9 @@ export default function Settings() {
           <View key={sectionIndex} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.section}</Text>
             <View style={styles.sectionContent}>
-              {section.items.map((item, itemIndex) => renderSettingItem(item, itemIndex))}
+              {section.items.map((item, itemIndex) =>
+                renderSettingItem(item, itemIndex)
+              )}
             </View>
           </View>
         ))}

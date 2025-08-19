@@ -33,14 +33,14 @@ export async function authentication(username: string, password: string) {
     }
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
 
     return data;
   } catch (error) {
-    console.log('Error generating token:', error);
+    console.log('Error generating token:', error.message);
     throw error;
   }
 }
@@ -60,17 +60,17 @@ export async function getAllDistrictList() {
     );
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch district list: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching district list:', error);
+    console.log('Error fetching district list:', error.message);
     throw error;
   }
 }
@@ -92,20 +92,18 @@ export async function getPoliceStationsByDistrictId(
     );
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch police station list: ${response.status}`
-      );
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
 
     return data;
   } catch (error) {
-    console.log('Error fetching police station list:', error);
+    console.log('Error fetching police station list:', error.message);
     throw error;
   }
 }
@@ -125,18 +123,18 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
     );
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch mouza list: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
 
     return data;
   } catch (error) {
-    console.log('Error fetching mouza list:', error);
+    console.log('Error fetching mouza list:', error.message);
     throw error;
   }
 }
@@ -158,17 +156,17 @@ export async function getAllHaatDetailsByDistrictID(
     );
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch haat details: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error);
+    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }
@@ -631,11 +629,11 @@ export async function saveSurveyOnline(surveyData: any) {
     console.log("response", response);
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch haat details: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
@@ -644,7 +642,7 @@ export async function saveSurveyOnline(surveyData: any) {
 
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error);
+    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 } 
@@ -667,17 +665,49 @@ export async function getDashboardCountBySurveyUserID(
     );
 
     if (response.status === 401) {
-      throw new Error('Unauthorized: Please login again.');
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch haat details: ${response.status}`);
+      throw { status: response.status, message: "API Error" };
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error);
+    console.log('Error fetching haat details:', error.message);
+    throw error;
+  }
+}
+
+export async function getNumberOfStallsPerMarketID(
+  UserID: string | number
+) {
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(
+      `http://115.187.62.16:9999/HMSRestAPI/api/user/getNumberOfStallsPerMarketID?UserID=${UserID}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${yourTokenVariable}`,
+        },
+      }
+    );
+
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
+
+    if (!response.ok) {
+      throw { status: response.status, message: "API Error" };
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }

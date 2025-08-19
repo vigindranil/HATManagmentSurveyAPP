@@ -30,7 +30,10 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDashboardCountBySurveyUserID } from '../../api';
+import { getDashboardCountBySurveyUserID, getNumberOfStallsPerMarketID } from '../../api';
+import { useAuth } from '@/context/auth-context';
+
+
 
 
 
@@ -41,7 +44,9 @@ export default function Dashboard() {
   const router = useRouter();
   const { isOnline, pendingSurveys, getAllSurveys } = useOfflineStorage();
   const [totalSurveys, setTotalSurveys] = React.useState(156);
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>([]);
+  const [stallData, setStallData] = useState<any>([]);
+  const { setUser, setIsAuthenticated } = useAuth();
 
   React.useEffect(() => {
     loadSurveyStats();
@@ -56,16 +61,29 @@ export default function Dashboard() {
     const fetchUser = async () => {
       try {
         const user1 = await AsyncStorage.getItem('user');
+        console.log(user1);
         if (user1) {
+          console.log("fetchuser1");
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2) {
             const Data = await getDashboardCountBySurveyUserID(parsedUser2.UserID);
+            const stallData = await getNumberOfStallsPerMarketID(parsedUser2.UserID);
             setDashboardData(Data?.data);
+            setStallData(stallData?.data);
           }
         }
       } catch (error) {
         console.error('Error fetching dashboard data', error);
+        if (error.status === 401) {
+        
+          setUser(null);
+          setIsAuthenticated(false);
+          await AsyncStorage.removeItem('user');
+          router.replace('/(auth)/login');
+        } else {
+          console.error('Error fetching dashboard data', error);
+      }
       }
     };
     fetchUser();
@@ -307,11 +325,12 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
 
-            {recentSurveys.map((survey) => {
+            {stallData.map((survey) => {
               const StatusIcon = getStatusIcon(survey.status);
               return (
                 <TouchableOpacity
-                  key={survey.id}
+                  key={survey.market_id}
+                  // key={survey.id}
                   style={styles.surveyCard}
                   activeOpacity={0.7}
                 >
@@ -319,14 +338,17 @@ export default function Dashboard() {
                     <View style={styles.surveyInfo}>
                       <View style={styles.surveyHeader}>
                         <Text style={styles.surveyLocation}>
-                          {survey.location}
+                          {/* {survey.location} */}
+                           {survey.market_name}
+
                         </Text>
                         <Text style={styles.surveyDate}>{survey.date}</Text>
                       </View>
 
                       <View style={styles.surveyMeta}>
                         <Text style={styles.stallCount}>
-                          {survey.stallCount} stalls
+                          {/* {survey.stallCount} stalls */}
+                          {survey.number_of_stalls} stalls
                         </Text>
                         <View
                           style={[
@@ -351,7 +373,7 @@ export default function Dashboard() {
                         </View>
                       </View>
 
-                      {survey.status === 'In Progress' && (
+                      {/* {survey.status === 'In Progress' && (
                         <View style={styles.progressContainer}>
                           <View style={styles.progressBar}>
                             <View
@@ -365,13 +387,13 @@ export default function Dashboard() {
                             {survey.progress}% complete
                           </Text>
                         </View>
-                      )}
+                      )} */}
                     </View>
 
-                    <ArrowRight size={16} color="#9CA3AF" />
+                    {/* <ArrowRight size={16} color="#9CA3AF" /> */}
                   </View>
                 </TouchableOpacity>
-              );
+              );  
             })}
           </View>
         </ScrollView>

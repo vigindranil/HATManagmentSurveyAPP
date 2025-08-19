@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,8 +22,10 @@ interface AuthContextType {
   isAuthenticated: boolean;
   user: User | null;
   login: (token: string) => Promise<void>;
-  logout: () => void;
+  // logout: () => void;
   setReloadUser: (userData: User) => Promise<void>;
+  setIsAuthenticated: Dispatch<SetStateAction<boolean>>; 
+  setUser :  Dispatch<SetStateAction<User | null>>; // <-- update this line
 }
 
 // Create the AuthContext
@@ -55,26 +57,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     restoreUser();
   }, []);
 
-  // Check if the user is authenticated when the route changes
   useEffect(() => {
     if (isAuthLoading) return;
     const inAuthGroup = segments[0] === '(tabs)';
 
     if (!isAuthenticated && inAuthGroup) {
       // Redirect to the login page if not authenticated
-        // router.replace("/splash")
+      // router.replace("/splash")
     } else if (isAuthenticated && !inAuthGroup && segments[0] !== 'home') {
       // Redirect to the splash page if authenticated and not already navigating to splash
-        // router.replace("/")
+      // router.replace("/")
     }
   }, [isAuthenticated, segments, isAuthLoading]);
 
   // Login function
-  const login = async ( token: string) => {
+  const login = async (token: string) => {
     if (token) {
       try {
         const decodedUser = (await jwtDecode(token)) as User;
-       
         setAuthToken(token);
         setUser(decodedUser);
         setIsAuthenticated(true);
@@ -106,13 +106,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+ 
+
   // Logout function
-  const logout = async () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    await AsyncStorage.removeItem('user');
-    // router.replace("/login")
-  };
+  // const logout = async () => {
+
+  //   console.log("logout");
+  //     setUser(null);
+  //     setIsAuthenticated(false);
+  //     await AsyncStorage.removeItem('user');
+  //   const user1 = await AsyncStorage.getItem('user');
+  //   console.log("user",user1);
+  //   // router.replace("/");
+  // };
 
   if (isAuthLoading) {
     // Optionally render a splash/loading indicator here
@@ -121,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, user, login, logout, setReloadUser }}
+    value={{ isAuthenticated, user, login, setReloadUser, setIsAuthenticated, setUser }}
     >
       {children}
     </AuthContext.Provider>
