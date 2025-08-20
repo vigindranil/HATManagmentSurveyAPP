@@ -16,6 +16,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AlertNotificationRoot } from 'react-native-alert-notification';
+import CustomAlert from '@/components/CustomAlert';
+
 import {
   ChevronLeft,
   ChevronRight,
@@ -121,7 +124,13 @@ export default function Survey() {
   const [policeStationOptions, setPoliceStationOptions] = useState([]);
   const [mouzaOptions, setMouzaOptions] = useState([]);
   const [user, setUser] = useState<any>(null);
+  const [loadImage, setLoadImage] = useState<any>(false);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
+  const [alertInfo, setAlertInfo] = useState({
+    visible: false,
+    type: 'success', // 'success' or 'error'
+    message: '',
+  });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -203,7 +212,7 @@ export default function Survey() {
     {
       title: 'Applicant Details',
       icon: FileText,
-      color: '#F59E42',
+      color: '#A33BB8',
       bgColor: '#FFF7ED',
       description: 'Applicant personal and document information',
       fields: [
@@ -259,7 +268,7 @@ export default function Survey() {
         {
           key: 'document_image',
           label: 'Document Image',
-          required: false,
+          required: true,
           placeholder: 'Upload document image',
           showFor: ['new', 'existing', 'transfer'],
           type: 'image',
@@ -274,7 +283,7 @@ export default function Survey() {
         {
           key: 'pan_image',
           label: 'PAN Image',
-          required: false,
+          required: true,
           placeholder: 'Upload PAN image',
           showFor: ['new', 'existing', 'transfer'],
           type: 'image',
@@ -375,7 +384,7 @@ export default function Survey() {
         {
           key: 'affidavit_attached',
           label: 'Affidavit (Attachment)',
-          required: false,
+          required: true,
           placeholder: 'Upload affidavit',
           showFor: ['transfer'],
           type: 'image',
@@ -398,7 +407,7 @@ export default function Survey() {
         {
           key: 'death_certificate_attached',
           label: 'Death Certificate (Attachment)',
-          required: false,
+          required: true,
           placeholder: 'Upload death certificate ',
           showFor: ['transfer'],
           type: 'image',
@@ -406,7 +415,7 @@ export default function Survey() {
         {
           key: 'noc_legal_heirs_attached',
           label: 'NOC Legal Heirs (Attachment)',
-          required: false,
+          required: true,
           placeholder: 'Upload NOC from legal heirs',
           showFor: ['transfer'],
           type: 'image',
@@ -490,15 +499,15 @@ export default function Survey() {
           required: true,
           placeholder: 'Enter plot number',
         },
-        {
-          key: 'area_dom_sqft',
-          label: 'Area (Domestic, sqft)',
-          required: true,
-          placeholder: 'Enter domestic area in sqft',
-        },
+        // {
+        //   key: 'area_dom_sqft',
+        //   label: 'Area (Domestic, sqft)',
+        //   required: true,
+        //   placeholder: 'Enter domestic area in sqft',
+        // },
         {
           key: 'area_com_sqft',
-          label: 'Area (Commercial, sqft)',
+          label: 'Area (sqft)',
           required: true,
           placeholder: 'Enter commercial area in sqft',
         },
@@ -557,14 +566,14 @@ export default function Survey() {
       fields: [
         {
           key: 'stall_image1',
-          label: 'Image 1',
-          required: false,
+          label: 'Stall Image 1',
+          required: true,
           placeholder: 'Tap to select or take a photo',
           type: 'images',
         },
         {
           key: 'stall_image2',
-          label: 'Image 2',
+          label: 'Stall Image 2',
           required: false,
           placeholder: 'Tap to select or take a photo',
           type: 'images',
@@ -628,6 +637,17 @@ export default function Survey() {
     fetchDistricts();
   }, []);
 
+  const handleAlertConfirm = () => {
+    // Hide the alert
+    setAlertInfo({ ...alertInfo, visible: false });
+
+    // If the alert was a success, reset the form
+    if (alertInfo.type === 'success') {
+      setSurveyData({ user_id: user ? String(user.UserID) : '' });
+      setCurrentStep(0);
+    }
+  };
+
   const updateField = (key: string, value: any) => {
     setSurveyData((prev) => {
       const newData = { ...prev, [key]: value };
@@ -658,9 +678,10 @@ export default function Survey() {
           onPress: async () => {
             try {
               setLoadingImage(fieldKey);
+              setLoadImage(true);
               const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                mediaTypes: ['images'],
+                allowsEditing: false,
                 aspect: [4, 3],
                 quality: 0.7,
                 exif: true,
@@ -696,6 +717,7 @@ export default function Survey() {
               console.error('Camera pick failed:', err);
             } finally {
               setLoadingImage(null);
+              setLoadImage(false);
             }
           },
         },
@@ -704,9 +726,10 @@ export default function Survey() {
           onPress: async () => {
             try {
               setLoadingImage(fieldKey);
+              setLoadImage(true);
               const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                mediaTypes: ['images'],
+                allowsEditing: false,
                 aspect: [4, 3],
                 quality: 0.7,
                 exif: true,
@@ -742,6 +765,7 @@ export default function Survey() {
               console.error('Gallery pick failed:', err);
             } finally {
               setLoadingImage(null);
+              setLoadImage(false);
             }
           },
         },
@@ -749,8 +773,6 @@ export default function Survey() {
       ]
     );
   };
-
- 
 
   const handleImagePick = async (fieldKey: string) => {
     Alert.alert(
@@ -762,9 +784,10 @@ export default function Survey() {
           onPress: async () => {
             try {
               setLoadingImage(fieldKey);
+              setLoadImage(true);
               const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                mediaTypes: ['images'],
+                allowsEditing: false,
                 aspect: [4, 3],
                 quality: 0.7,
               });
@@ -778,6 +801,7 @@ export default function Survey() {
               console.error('Camera pick failed:', err);
             } finally {
               setLoadingImage(null);
+              setLoadImage(false);
             }
           },
         },
@@ -786,9 +810,10 @@ export default function Survey() {
           onPress: async () => {
             try {
               setLoadingImage(fieldKey);
+              setLoadImage(true);
               const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                mediaTypes: ['images'],
+                allowsEditing: false,
                 aspect: [4, 3],
                 quality: 0.7,
               });
@@ -802,6 +827,7 @@ export default function Survey() {
               console.error('Gallery pick failed:', err);
             } finally {
               setLoadingImage(null);
+              setLoadImage(false);
             }
           },
         },
@@ -860,7 +886,7 @@ export default function Survey() {
     'jl_no',
     'khatian_no',
     'plot_no',
-    'area_dom_sqft',
+    // 'area_dom_sqft',
     'area_com_sqft',
     'latitude',
     'longitude',
@@ -884,41 +910,60 @@ export default function Survey() {
         setIsSaving(true);
         try {
           const response = await saveSurveyOnline(surveyData);
-          const message =
+          const messages =
             response.status === 0
               ? `Survey submitted successfully! Your application number is ${response?.data?.applicationNumber}`
               : 'Survey submission failed. Please try again.';
 
           if (response.status === 0) {
-            Dialog.show({
-              type: ALERT_TYPE.SUCCESS,
-              title: '🎉 Success!',
-              textBody: message,
-              button: 'OK',
-              onHide: () => {
-                if (response.status === 0) {
-                  setSurveyData({ user_id: user ? String(user.UserID) : '' });
-                  setCurrentStep(0);
-                }
-              },
-              autoClose: false,
-              closeOnOverlayTap: true,
+            // Show a beautiful, stylish alert using React Native's Alert API as a fallback
+            // Alert.alert(
+            //   '🎉 Success!',
+            //   messages,
+            //   [
+            //     {
+            //       text: 'OK',
+            //       onPress: () => {
+            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
+            //         setCurrentStep(0);
+            //       },
+            //       style: 'default',
+            //     },
+            //   ],
+            //   { cancelable: false }
+            // );
+
+            setAlertInfo({
+              visible: true,
+              type: response.status === 0 ? 'success' : 'error',
+              message: messages,
             });
+
+           
           } else {
-            Dialog.show({
-              type: ALERT_TYPE.WARNING,
-              title: '❌ Error!',
-              textBody: message,
-              button: 'OK',
-              onHide: () => {
-                if (response.status === 0) {
-                  setSurveyData({ user_id: user ? String(user.UserID) : '' });
-                  setCurrentStep(0);
-                }
-              },
-              autoClose: false,
-              closeOnOverlayTap: true,
+            // Alert.alert(
+            //   '❌ Error!',
+            //   messages,
+            //   [
+            //     {
+            //       text: 'OK',
+            //       onPress: () => {
+            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
+            //         setCurrentStep(0);
+            //       },
+            //       style: 'default',
+            //     },
+            //   ],
+            //   { cancelable: false }
+            // );
+
+            setAlertInfo({
+              visible: true,
+              type: 'error',
+              message: messages,
             });
+
+           
           }
         } catch (err) {
           // console.error('Submission Error:', error);
@@ -929,20 +974,32 @@ export default function Survey() {
             await AsyncStorage.removeItem('user');
             router.replace('/(auth)/login'); // 👈 handle it here
           } else {
+           
+            // />;
+            // Alert.alert(
+            //   '❌ Error!',
+            //   `Failed to save survey. Please try again.`,
+            //   [
+            //     {
+            //       text: 'OK',
+            //       onPress: () => {
+            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
+            //         setCurrentStep(0);
+            //       },
+            //       style: 'default',
+            //     },
+            //   ],
+            //   { cancelable: false }
+            // );
+
+            setAlertInfo({
+              visible: true,
+              type: 'error',
+              message: 'Failed to save survey. Please try again.',
+            });
+
             console.error('Submission Error:', error.message);
           }
-          Dialog.show({
-            type: ALERT_TYPE.WARNING,
-            title: '🎉 Error!',
-            textBody: `Failed to save survey. Please try again.`,
-            button: 'OK',
-            onHide: () => {
-              setSurveyData({ user_id: user ? String(user.UserID) : '' });
-              setCurrentStep(0);
-            },
-            autoClose: false,
-            closeOnOverlayTap: true,
-          });
         } finally {
           setIsSaving(false);
         }
@@ -1176,9 +1233,10 @@ export default function Survey() {
 
     if (field.type === 'image') {
       // const imageValue = value as ImageFieldType;
-      const imageValue = (typeof value === 'object' && value !== null && 'uri' in value)
-    ? (value as ImageFieldType)
-    : undefined;
+      const imageValue =
+        typeof value === 'object' && value !== null && 'uri' in value
+          ? (value as ImageFieldType)
+          : undefined;
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
@@ -1216,9 +1274,10 @@ export default function Survey() {
 
     if (field.type === 'images') {
       // const imageValue = value as ImageFieldType;
-      const imageValue = (typeof value === 'object' && value !== null && 'uri' in value)
-    ? (value as ImageFieldType)
-    : undefined;
+      const imageValue =
+        typeof value === 'object' && value !== null && 'uri' in value
+          ? (value as ImageFieldType)
+          : undefined;
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
@@ -1306,7 +1365,25 @@ export default function Survey() {
             keyboardType={
               numericFields.includes(field.key) ? 'numeric' : 'default'
             }
-            maxLength={field.key === 'mobile' ? 10 : undefined}
+            maxLength={
+              field.key === 'mobile'
+                ? 10
+                : field.key === 'pan'
+                ? 10
+                : field.key === 'holding_no'
+                ? 10
+                : field.key === 'stall_no'
+                ? 10
+                : field.key === 'jl_no'
+                ? 6
+                : field.key === 'khatian_no'
+                ? 6
+                : field.key === 'plot_no'
+                ? 6
+                : field.key === 'pin_code'
+                ? 6
+                : undefined
+            }
             autoCapitalize={field.key === 'pan' ? 'characters' : 'none'}
             multiline={field.multiline}
             numberOfLines={field.multiline ? 4 : 1}
@@ -1365,6 +1442,13 @@ export default function Survey() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {alertInfo.visible && (
+        <CustomAlert
+          type={alertInfo.type}
+          message={alertInfo.message}
+          onConfirm={handleAlertConfirm}
+        />
+      )}
       <LinearGradient
         colors={[currentStepData.color, currentStepData.color + '90']}
         style={styles.header}
@@ -1437,11 +1521,11 @@ export default function Survey() {
             currentStep === 0 && styles.nextButtonFull,
           ]}
           onPress={nextStep}
-          disabled={isSaving}
+          disabled={isSaving || loadImage}
         >
           <LinearGradient
             colors={
-              isSaving
+              (isSaving || loadImage)
                 ? ['#9CA3AF', '#6B7280']
                 : [currentStepData.color, currentStepData.color + 'CC']
             }
@@ -1568,7 +1652,7 @@ const styles = StyleSheet.create({
   stepCircle: {
     width: 24,
     height: 24,
-    borderRadius: 16,
+    borderRadius: 14,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',

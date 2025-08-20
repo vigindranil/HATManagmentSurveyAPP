@@ -81,7 +81,7 @@ export default function Reports() {
           </ScrollView>
         </View>
         {/* Analytics Cards */}
-        <View style={styles.analyticsContainer}>
+        {/* <View style={styles.analyticsContainer}>
           <Text style={styles.sectionTitle}>Key Metrics</Text>
           <View style={styles.metricsGrid}>
             {analytics.map((metric, index) => (
@@ -98,10 +98,10 @@ export default function Reports() {
               </View>
             ))}
           </View>
-        </View>
+        </View> */}
 
         {/* Chart Placeholder */}
-        <View style={styles.chartContainer}>
+        {/* <View style={styles.chartContainer}>
           <Text style={styles.sectionTitle}>Survey Trends</Text>
           <View style={styles.chartPlaceholder}>
             <BarChart3 size={48} color="#94a3b8" />
@@ -109,10 +109,10 @@ export default function Reports() {
               Chart visualization would appear here
             </Text>
           </View>
-        </View>
+        </View> */}
 
         {/* Report Downloads */}
-        <View style={styles.reportsContainer}>
+        {/* <View style={styles.reportsContainer}>
           <Text style={styles.sectionTitle}>Available Reports</Text>
           {reportData.map((report, index) => (
             <View key={index} style={styles.reportCard}>
@@ -128,7 +128,7 @@ export default function Reports() {
               </TouchableOpacity>
             </View>
           ))}
-        </View>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );

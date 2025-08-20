@@ -30,13 +30,11 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getDashboardCountBySurveyUserID, getNumberOfStallsPerMarketID } from '../../api';
+import {
+  getDashboardCountBySurveyUserID,
+  getNumberOfStallsPerMarketID,
+} from '../../api';
 import { useAuth } from '@/context/auth-context';
-
-
-
-
-
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +44,9 @@ export default function Dashboard() {
   const [totalSurveys, setTotalSurveys] = React.useState(156);
   const [dashboardData, setDashboardData] = useState<any>([]);
   const [stallData, setStallData] = useState<any>([]);
+  // User details state and fetch logic
+  const [userDetails, setUserDetails] = useState<any>(null);
+
   const { setUser, setIsAuthenticated } = useAuth();
 
   React.useEffect(() => {
@@ -63,31 +64,42 @@ export default function Dashboard() {
         const user1 = await AsyncStorage.getItem('user');
         console.log(user1);
         if (user1) {
-          console.log("fetchuser1");
+          console.log('fetchuser1');
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2) {
-            const Data = await getDashboardCountBySurveyUserID(parsedUser2.UserID);
-            const stallData = await getNumberOfStallsPerMarketID(parsedUser2.UserID);
-            setDashboardData(Data?.data);
-            setStallData(stallData?.data);
+            setUserDetails(parsedUser2);
           }
         }
       } catch (error) {
         console.error('Error fetching dashboard data', error);
         if (error.status === 401) {
-        
           setUser(null);
           setIsAuthenticated(false);
           await AsyncStorage.removeItem('user');
           router.replace('/(auth)/login');
         } else {
           console.error('Error fetching dashboard data', error);
-      }
+        }
       }
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    async function load() {
+      if (userDetails) {
+        const Data = await getDashboardCountBySurveyUserID(userDetails.UserID);
+        const stallData = await getNumberOfStallsPerMarketID(
+          userDetails.UserID
+        );
+        setDashboardData(Data?.data);
+        setStallData(stallData?.data);
+      }
+    }
+
+    load();
+  });
 
   const stats = [
     {
@@ -108,15 +120,15 @@ export default function Dashboard() {
       bgColor: '#F0FDFA',
       description: 'This Month',
     },
-    {
-      icon: Clock,
-      title: 'Total Pending Verification',
-      value: dashboardData?.total_pending_verification?.toString() ?? '0',
-      // change: '+18%',
-      color: '#059669',
-      bgColor: '#F0FDF4',
-      description: 'Users',
-    },
+    // {
+    //   icon: Clock,
+    //   title: 'Total Pending Verification',
+    //   value: dashboardData?.total_pending_verification?.toString() ?? '0',
+    //   // change: '+18%',
+    //   color: '#059669',
+    //   bgColor: '#F0FDF4',
+    //   description: 'Users',
+    // },
     // {
     //   icon: Clock,
     //   title: 'Pending Sync',
@@ -236,26 +248,32 @@ export default function Dashboard() {
           </LinearGradient>
 
           {/* Quick Actions */}
-          <View style={styles.quickActionsContainer}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-            <View style={styles.quickActionsGrid}>
-              {quickActions.map((action, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.quickActionCard}
-                  onPress={() => router.push(action.route)}
-                  activeOpacity={0.7}
-                >
-                  <LinearGradient
-                    colors={[action.color, action.color + '90']}
-                    style={styles.quickActionGradient}
-                  >
-                    <action.icon size={24} color="#ffffff" />
-                  </LinearGradient>
-                  <Text style={styles.quickActionText}>{action.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View style={styles.ctaContainer}>
+            <TouchableOpacity
+              style={styles.newSurveyButton}
+              onPress={() => router.push('/survey')}
+              activeOpacity={0.9}
+            >
+              <LinearGradient
+                colors={['#10B981', '#34D399', '#6EE7B7']}
+                style={styles.newSurveyGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.newSurveyContent}>
+                  <View style={styles.newSurveyIcon}>
+                    <Plus size={24} color="#ffffff" />
+                  </View>
+                  <View style={styles.newSurveyText}>
+                    <Text style={styles.newSurveyTitle}>Start New Survey</Text>
+                    <Text style={styles.newSurveySubtitle}>
+                      Begin data collection
+                    </Text>
+                  </View>
+                  <ArrowRight size={20} color="#ffffff" />
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
 
           {/* Stats Cards */}
@@ -288,33 +306,6 @@ export default function Dashboard() {
           </View>
 
           {/* New Survey CTA */}
-          <View style={styles.ctaContainer}>
-            <TouchableOpacity
-              style={styles.newSurveyButton}
-              onPress={() => router.push('/survey')}
-              activeOpacity={0.9}
-            >
-              <LinearGradient
-                colors={['#2563EB', '#3B82F6', '#60A5FA']}
-                style={styles.newSurveyGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <View style={styles.newSurveyContent}>
-                  <View style={styles.newSurveyIcon}>
-                    <Plus size={24} color="#ffffff" />
-                  </View>
-                  <View style={styles.newSurveyText}>
-                    <Text style={styles.newSurveyTitle}>Start New Survey</Text>
-                    <Text style={styles.newSurveySubtitle}>
-                      Begin data collection
-                    </Text>
-                  </View>
-                  <ArrowRight size={20} color="#ffffff" />
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
 
           {/* Recent Surveys */}
           <View style={styles.recentSection}>
@@ -325,76 +316,64 @@ export default function Dashboard() {
               </TouchableOpacity>
             </View>
 
-            {stallData.map((survey) => {
-              const StatusIcon = getStatusIcon(survey.status);
-              return (
-                <TouchableOpacity
-                  key={survey.market_id}
-                  // key={survey.id}
-                  style={styles.surveyCard}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.surveyCardContent}>
-                    <View style={styles.surveyInfo}>
-                      <View style={styles.surveyHeader}>
-                        <Text style={styles.surveyLocation}>
-                          {/* {survey.location} */}
-                           {survey.market_name}
+            {stallData && stallData.length > 0 ? (
+              stallData.map((survey: any) => {
+                const StatusIcon = getStatusIcon(survey.status);
+                return (
+                  <TouchableOpacity
+                    key={survey.market_id}
+                    style={styles.surveyCard}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.surveyCardContent}>
+                      <View style={styles.surveyInfo}>
+                        <View style={styles.surveyHeader}>
+                          <Text style={styles.surveyLocation}>
+                            {survey.market_name}
+                          </Text>
+                          <Text style={styles.surveyDate}>{survey.date}</Text>
+                        </View>
 
-                        </Text>
-                        <Text style={styles.surveyDate}>{survey.date}</Text>
-                      </View>
-
-                      <View style={styles.surveyMeta}>
-                        <Text style={styles.stallCount}>
-                          {/* {survey.stallCount} stalls */}
-                          {survey.number_of_stalls} stalls
-                        </Text>
-                        <View
-                          style={[
-                            styles.surveyStatus,
-                            {
-                              backgroundColor: getStatusBgColor(survey.status),
-                            },
-                          ]}
-                        >
-                          <StatusIcon
-                            size={14}
-                            color={getStatusColor(survey.status)}
-                          />
-                          <Text
+                        <View style={styles.surveyMeta}>
+                          <Text style={styles.stallCount}>
+                            {survey.number_of_stalls} stalls
+                          </Text>
+                          <View
                             style={[
-                              styles.statusText,
-                              { color: getStatusColor(survey.status) },
+                              styles.surveyStatus,
+                              {
+                                backgroundColor: getStatusBgColor(
+                                  survey.status
+                                ),
+                              },
                             ]}
                           >
-                            {survey.status}
-                          </Text>
+                            <StatusIcon
+                              size={14}
+                              color={getStatusColor(survey.status)}
+                            />
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: getStatusColor(survey.status) },
+                              ]}
+                            >
+                              {survey.status}
+                            </Text>
+                          </View>
                         </View>
                       </View>
-
-                      {/* {survey.status === 'In Progress' && (
-                        <View style={styles.progressContainer}>
-                          <View style={styles.progressBar}>
-                            <View
-                              style={[
-                                styles.progressFill,
-                                { width: `${survey.progress}%` },
-                              ]}
-                            />
-                          </View>
-                          <Text style={styles.progressText}>
-                            {survey.progress}% complete
-                          </Text>
-                        </View>
-                      )} */}
                     </View>
-
-                    {/* <ArrowRight size={16} color="#9CA3AF" /> */}
-                  </View>
-                </TouchableOpacity>
-              );  
-            })}
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <Text
+                style={{ textAlign: 'center', color: '#888', marginTop: 20 }}
+              >
+                No surveys
+              </Text>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -606,7 +585,7 @@ const styles = StyleSheet.create({
   },
   newSurveySubtitle: {
     fontSize: 14,
-    color: '#BFDBFE',
+    color: '#FFFFFF',
     fontWeight: '500',
   },
   recentSection: {

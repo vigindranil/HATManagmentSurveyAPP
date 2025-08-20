@@ -467,7 +467,7 @@ export async function saveSurveyOnline(surveyData: any) {
       jl_no: surveyData?.jl_no || "",
       khatian_no: surveyData?.khatian_no || "",
       plot_no: surveyData?.plot_no || "",
-      area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
+      // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
       area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
       direction: surveyData?.direction || "",
       latitude: parseFloat(surveyData?.latitude) || 0.0,
@@ -482,7 +482,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.document_image.uri,
         name: 'document.jpg',
         type: 'image/jpeg',
-        exif: surveyData.document_image.exif || "",
+       
       } as any);
     } else {
       formData.append('documentImage', "");
@@ -493,7 +493,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.pan_image.uri,
         name: 'document.jpg',
         type: 'image/jpeg',
-        exif: surveyData.pan_image.exif || "",
+       
       } as any);
     } else {
       formData.append('panImage', "");
@@ -504,7 +504,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.residential_certificate_attached.uri,
         name: 'residential_certificate.jpg',
         type: 'image/jpeg',
-        exif: surveyData.residential_certificate_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('residentialCertificateAttached', "");
@@ -515,7 +515,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.trade_license_attached.uri,
         name: 'trade_license.jpg',
         type: 'image/jpeg',
-        exif: surveyData.trade_license_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('tradeLicenseAttached', "");
@@ -526,7 +526,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.affidavit_attached.uri,
         name: 'affidavit.jpg',
         type: 'image/jpeg',
-        exif: surveyData.affidavit_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('affidavitAttached', "");
@@ -537,7 +537,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.warision_certificate_attached.uri,
         name: 'warision_certificate.jpg',
         type: 'image/jpeg',
-        exif: surveyData.warision_certificate_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('warisionCertificateAttached', "");
@@ -548,7 +548,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.death_certificate_attached.uri,
         name: 'death_certificate.jpg',
         type: 'image/jpeg',
-        exif: surveyData.death_certificate_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('deathCertificateAttached', "");
@@ -559,7 +559,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.noc_legal_heirs_attached.uri,
         name: 'noc_legal_heirs.jpg',
         type: 'image/jpeg',
-        exif: surveyData.noc_legal_heirs_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('nocLegalHeirsAttached', "");
@@ -570,7 +570,7 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.sketch_map_attached.uri,
         name: 'sketch_map.jpg',
         type: 'image/jpeg',
-        exif: surveyData.sketch_map_attached.exif || "",
+       
       } as any);
     } else {
       formData.append('sketchMapAttached', "");
@@ -616,15 +616,15 @@ export async function saveSurveyOnline(surveyData: any) {
       redirect: 'follow' as RequestRedirect,
     };
 
-    const response = await fetch(
-        'http://192.168.0.229:9999/api/user/saveSurveyDetails',
-        requestOptions
-      );
-
     // const response = await fetch(
-    //   'http://115.187.62.16:9999/HMSRestAPI/api/user/saveSurveyDetails',
-    //   requestOptions
-    // );
+    //     'http://192.168.0.229:9999/api/user/saveSurveyDetails',
+    //     requestOptions
+    //   );
+
+    const response = await fetch(
+      'http://115.187.62.16:9999/HMSRestAPI/api/user/saveSurveyDetails',
+      requestOptions
+    );
 
     console.log("response", response);
 
