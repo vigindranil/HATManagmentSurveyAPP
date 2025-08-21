@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Building2, Sparkles } from 'lucide-react-native';
 
+
 const { width, height } = Dimensions.get('window');
 
 export default function Splash() {
@@ -12,6 +13,7 @@ export default function Splash() {
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const sparkleAnim = useRef(new Animated.Value(0)).current;
+  
 
   useEffect(() => {
     // Start animations
@@ -52,13 +54,8 @@ export default function Splash() {
       ])
     ).start();
 
-    // Navigate to login after 3 seconds
-    const timer = setTimeout(() => {
-      router.replace('/(auth)/login');
-    }, 3000);
+  },[]);
 
-    return () => clearTimeout(timer);
-  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

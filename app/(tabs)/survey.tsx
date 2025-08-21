@@ -40,6 +40,8 @@ import { SelectList } from 'react-native-dropdown-select-list';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ALERT_TYPE, Dialog, Toast } from 'react-native-alert-notification';
 // import { saveSurveyUser } from '@/api';
+import { useDashboard } from '@/context/dashboard-context';
+
 import {
   getAllDistrictList,
   getPoliceStationsByDistrictId,
@@ -132,6 +134,8 @@ export default function Survey() {
     message: '',
   });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
+  const { setNeedsRefresh } = useDashboard();
+  
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -646,6 +650,10 @@ export default function Survey() {
       setSurveyData({ user_id: user ? String(user.UserID) : '' });
       setCurrentStep(0);
     }
+    // if (alertInfo.type === 'success' || alertInfo.type === 'error') {
+    //   setSurveyData({ user_id: user ? String(user.UserID) : '' });
+    //   setCurrentStep(0);
+    // }r
   };
 
   const updateField = (key: string, value: any) => {
@@ -842,7 +850,6 @@ export default function Survey() {
       '1': 'new',
       '2': 'existing',
       '3': 'transfer',
-      // '4': 'rent',
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];
@@ -862,14 +869,31 @@ export default function Survey() {
         }
       }
 
-      const fieldValue = surveyData[field.key as keyof SurveyData];
+      const fieldValue = surveyData[field.key as keyof SurveyData] as string;
       if (
         fieldValue === null ||
         fieldValue === undefined ||
         fieldValue === ''
       ) {
-        Alert.alert('Validation Error', `${field.label} is required`);
+        setAlertInfo({
+            visible: true,
+            type: 'error',
+            message: `${field.label} is required`,
+        });
         return false;
+      }
+      
+      // PAN validation logic
+      if (field.key === 'pan') {
+        const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+        if (!panRegex.test(fieldValue)) {
+            setAlertInfo({
+                visible: true,
+                type: 'error',
+                message: 'Invalid PAN format. Please use the format ABCDE1234F.',
+            });
+            return false;
+        }
       }
     }
     return true;
@@ -935,10 +959,11 @@ export default function Survey() {
 
             setAlertInfo({
               visible: true,
-              type: response.status === 0 ? 'success' : 'error',
+              type:  'success' ,
               message: messages,
             });
 
+            setNeedsRefresh(true);
            
           } else {
             // Alert.alert(
@@ -1374,6 +1399,8 @@ export default function Survey() {
                 ? 10
                 : field.key === 'stall_no'
                 ? 10
+                : field.key === 'previous_license_no'
+                ? 10
                 : field.key === 'jl_no'
                 ? 6
                 : field.key === 'khatian_no'
@@ -1382,6 +1409,8 @@ export default function Survey() {
                 ? 6
                 : field.key === 'pin_code'
                 ? 6
+                : field.key === 'property_tax_payment_to_year'
+                ? 4
                 : undefined
             }
             autoCapitalize={field.key === 'pan' ? 'characters' : 'none'}

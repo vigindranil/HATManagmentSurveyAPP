@@ -35,6 +35,8 @@ import {
   getNumberOfStallsPerMarketID,
 } from '../../api';
 import { useAuth } from '@/context/auth-context';
+import { useDashboard } from '@/context/dashboard-context';
+
 
 const { width } = Dimensions.get('window');
 
@@ -46,6 +48,7 @@ export default function Dashboard() {
   const [stallData, setStallData] = useState<any>([]);
   // User details state and fetch logic
   const [userDetails, setUserDetails] = useState<any>(null);
+  const { needsRefresh } = useDashboard();
 
   const { setUser, setIsAuthenticated } = useAuth();
 
@@ -99,7 +102,7 @@ export default function Dashboard() {
     }
 
     load();
-  });
+  },[userDetails,needsRefresh]);
 
   const stats = [
     {

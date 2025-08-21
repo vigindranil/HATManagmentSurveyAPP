@@ -17,7 +17,7 @@ export default function CustomAlert({ type = "success", message, onConfirm }) {
 
   const isSuccess = type === "success";
   const colors = {
-    bg: isSuccess ? "#2563EB" : "#DC2626", // blue / red
+    bg: isSuccess ? "#2563EB" : "#DC2626", 
     badge: isSuccess ? "#3B82F6" : "#EF4444",
     emoji: isSuccess ? "🎉" : "❌",
     title: isSuccess ? "Success!" : "Error!",
