@@ -53,6 +53,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
+import { compressImageUri } from '@/utils/compressImage'
+
 
 const { width } = Dimensions.get('window');
 
@@ -130,7 +132,7 @@ export default function Survey() {
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
   const [alertInfo, setAlertInfo] = useState({
     visible: false,
-    type: 'success', // 'success' or 'error'
+    type: 'success',
     message: '',
   });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
@@ -166,7 +168,7 @@ export default function Survey() {
   const [isSaving, setIsSaving] = useState(false);
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
-  // CHANGED: This state now tracks WHICH image is loading
+ 
   const [loadingImage, setLoadingImage] = useState<string | null>(null);
 
   const yesNoOptions = [
@@ -717,7 +719,12 @@ export default function Survey() {
                   longitude = loc.coords.longitude;
                 }
 
-                updateField(fieldKey, { uri: asset.uri });
+                // Call the compressImageUri function to compress the image before updating the field
+                const compressedUri = await compressImageUri(asset.uri);
+
+                console.log(compressedUri);
+
+                updateField(fieldKey, { uri: compressedUri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
               }
@@ -765,7 +772,11 @@ export default function Survey() {
                   longitude = loc.coords.longitude;
                 }
 
-                updateField(fieldKey, { uri: asset.uri });
+                const compressedUri = await compressImageUri(asset.uri);
+
+                console.log(compressedUri);
+
+                updateField(fieldKey, { uri: compressedUri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
               }
@@ -801,9 +812,17 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-                updateField(fieldKey, {
-                  uri: result.assets[0].uri,
-                });
+
+
+                const compressedUri = await compressImageUri( result.assets[0].uri);
+
+                console.log(compressedUri);
+
+                updateField(fieldKey, { uri: compressedUri });
+
+                // updateField(fieldKey, {
+                //   uri: result.assets[0].uri,
+                // });
               }
             } catch (err) {
               console.error('Camera pick failed:', err);
@@ -827,9 +846,19 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-                updateField(fieldKey, {
-                  uri: result.assets[0].uri,
-                });
+
+
+                const compressedUri = await compressImageUri( result.assets[0].uri);
+
+                console.log(compressedUri);
+
+                updateField(fieldKey, { uri: compressedUri });
+
+
+
+                // updateField(fieldKey, {
+                //   uri: result.assets[0].uri,
+                // });
               }
             } catch (err) {
               console.error('Gallery pick failed:', err);
@@ -895,6 +924,21 @@ export default function Survey() {
             return false;
         }
       }
+
+      if (field.key === 'mobile') {
+        const phoneRegex = /^[6-9]\d{9}$/;
+        if (!phoneRegex.test(fieldValue)) {
+            setAlertInfo({
+                visible: true,
+                type: 'error',
+                message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number.',
+            });
+            return false;
+        }
+      }
+
+
+
     }
     return true;
   };
@@ -910,7 +954,6 @@ export default function Survey() {
     'jl_no',
     'khatian_no',
     'plot_no',
-    // 'area_dom_sqft',
     'area_com_sqft',
     'latitude',
     'longitude',
@@ -940,22 +983,7 @@ export default function Survey() {
               : 'Survey submission failed. Please try again.';
 
           if (response.status === 0) {
-            // Show a beautiful, stylish alert using React Native's Alert API as a fallback
-            // Alert.alert(
-            //   '🎉 Success!',
-            //   messages,
-            //   [
-            //     {
-            //       text: 'OK',
-            //       onPress: () => {
-            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
-            //         setCurrentStep(0);
-            //       },
-            //       style: 'default',
-            //     },
-            //   ],
-            //   { cancelable: false }
-            // );
+           
 
             setAlertInfo({
               visible: true,
@@ -966,21 +994,7 @@ export default function Survey() {
             setNeedsRefresh(true);
            
           } else {
-            // Alert.alert(
-            //   '❌ Error!',
-            //   messages,
-            //   [
-            //     {
-            //       text: 'OK',
-            //       onPress: () => {
-            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
-            //         setCurrentStep(0);
-            //       },
-            //       style: 'default',
-            //     },
-            //   ],
-            //   { cancelable: false }
-            // );
+            
 
             setAlertInfo({
               visible: true,
@@ -1000,22 +1014,7 @@ export default function Survey() {
             router.replace('/(auth)/login'); // 👈 handle it here
           } else {
            
-            // />;
-            // Alert.alert(
-            //   '❌ Error!',
-            //   `Failed to save survey. Please try again.`,
-            //   [
-            //     {
-            //       text: 'OK',
-            //       onPress: () => {
-            //         setSurveyData({ user_id: user ? String(user.UserID) : '' });
-            //         setCurrentStep(0);
-            //       },
-            //       style: 'default',
-            //     },
-            //   ],
-            //   { cancelable: false }
-            // );
+           
 
             setAlertInfo({
               visible: true,
@@ -1069,7 +1068,7 @@ export default function Survey() {
       setHaatAllDetailsOptions(haatDetails?.data || []);
       setPoliceStationOptions(policeStations?.data || []);
     } catch (err) {
-      // console.error('Error fetching dependent district data:', error);
+    
       const error = err as any;
       if (error.status === 401) {
         setUsers(null);
@@ -1090,7 +1089,7 @@ export default function Survey() {
       const mouzaList = await getMouzaListByThanaID(selectedKey);
       setMouzaOptions(mouzaList?.data || []);
     } catch (err) {
-      // console.error('Error fetching mouza data:', error);
+      
       const error = err as any;
       if (error.status === 401) {
         setUsers(null);
@@ -1108,7 +1107,7 @@ export default function Survey() {
       '1': 'new',
       '2': 'existing',
       '3': 'transfer',
-      // '4': 'rent',
+      
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import {
-  Alert,
+  Modal,
   AppState,
   Platform,
   View,
@@ -9,8 +9,19 @@ import {
   ActivityIndicator,
   BackHandler,
   Linking,
+  TouchableOpacity,
 } from 'react-native';
 import * as Location from 'expo-location';
+
+interface AlertInfo {
+  title: string;
+  message: string;
+  buttons: {
+    text: string;
+    onPress: () => void;
+    style?: 'cancel' | 'default';
+  }[];
+}
 
 interface LocationGuardProps {
   children: ReactNode;
@@ -18,147 +29,230 @@ interface LocationGuardProps {
 
 const LocationGuard = ({ children }: LocationGuardProps) => {
   const [locationReady, setLocationReady] = useState(false);
-  const appState = useRef(AppState.currentState);
-  const locationWatcher = useRef<Location.LocationSubscription | null>(null);
-  const serviceStatusWatcher = useRef<number | null>(null);
-  const isVerifying = useRef(false);
+  const [alertInfo, setAlertInfo] = useState<AlertInfo | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const stopAllWatchers = () => {
-    if (locationWatcher.current) locationWatcher.current.remove();
-    if (serviceStatusWatcher.current) clearInterval(serviceStatusWatcher.current);
-  };
+  const appState = useRef(AppState.currentState);
+  const isAlertVisible = useRef(false);
 
   useEffect(() => {
+    isAlertVisible.current = alertInfo !== null;
+  }, [alertInfo]);
+
+  const verifyAndShowPrompts = async () => {
+    try {
+      setIsVerifying(true);
+
+      // 1. Permission check
+      let { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        const { status: newStatus } =
+          await Location.requestForegroundPermissionsAsync();
+        if (newStatus !== 'granted') {
+          setLocationReady(false);
+          setAlertInfo({
+            title: 'Permission Denied',
+            message:
+              'Location permission is required. Please grant permission in your settings.',
+            buttons: [
+              { text: 'Settings', onPress: handleSettingsPress },
+              { text: 'Exit', onPress: exitApp, style: 'cancel' },
+            ],
+          });
+          setIsVerifying(false);
+          return;
+        }
+      }
+
+      // 2. Location services
+      const enabled = await Location.hasServicesEnabledAsync();
+      if (!enabled) {
+        setLocationReady(false);
+        setAlertInfo({
+          title: 'Location Error',
+          message: 'Your location is turned off.',
+          buttons: [{ text: 'OK', onPress: showTurnOnLocationPrompt }],
+        });
+        setIsVerifying(false);
+        return;
+      }
+
+      // 3. Mock location check
+      const location = await Location.getCurrentPositionAsync();
+      if (location.mocked) {
+        setLocationReady(false);
+        setAlertInfo({
+          title: 'Mock Location',
+          message:
+            'Mock locations are not allowed. Please disable them to continue.',
+          buttons: [{ text: 'Exit', onPress: exitApp }],
+        });
+        setIsVerifying(false);
+        return;
+      }
+
+      // Success
+      setAlertInfo(null);
+      setLocationReady(true);
+      setIsVerifying(false);
+    } catch (error) {
+      setLocationReady(false);
+      setAlertInfo({
+        title: 'Location Error',
+        message:
+          'An unexpected error occurred. Please check your location settings.',
+        buttons: [{ text: 'Exit', onPress: exitApp }],
+      });
+      setIsVerifying(false);
+    }
+  };
+
+  // AppState listener
+  useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        verifyLocation();
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        verifyAndShowPrompts();
       }
       appState.current = nextAppState;
     });
+    return () => subscription.remove();
+  }, []);
 
-    checkAndRequestLocation(); // Changed from handleInitialPrompt
-
-    return () => {
-      subscription.remove();
-      stopAllWatchers();
+  // Continuous check (detect GPS from anywhere)
+  useEffect(() => {
+    const continuousCheck = async () => {
+      const enabled = await Location.hasServicesEnabledAsync();
+      if (enabled && isAlertVisible.current) {
+        setIsVerifying(true);
+        await verifyAndShowPrompts();
+      } else if (!enabled && !isAlertVisible.current) {
+        await verifyAndShowPrompts();
+      }
     };
+
+    verifyAndShowPrompts();
+    const intervalId = setInterval(continuousCheck, 1000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const exitApp = () => {
-    if (Platform.OS === 'android') BackHandler.exitApp();
-    else Alert.alert('Exit App', 'Please close the app manually.');
-  };
-
-  // New function to check status before showing any alerts
-  const checkAndRequestLocation = async () => {
-    const hasServicesEnabled = await Location.hasServicesEnabledAsync();
-    const { status } = await Location.getForegroundPermissionsAsync();
-
-    if (hasServicesEnabled && status === 'granted') {
-      verifyLocation(); // If everything is okay, go straight to verification
+    if (Platform.OS === 'android') {
+      BackHandler.exitApp();
     } else {
-      handleInitialPrompt(); // Otherwise, show the initial prompt
+      setAlertInfo({
+        title: 'Exit App',
+        message: 'Please close the app manually.',
+        buttons: [],
+      });
     }
   };
 
-  const handleInitialPrompt = () => {
-    Alert.alert(
-      'Location Required',
-      'This app needs your location to function properly.',
-      [
-        { text: 'Cancel', onPress: exitApp, style: 'cancel' },
-        { text: 'OK', onPress: () => verifyLocation() },
-      ]
-    );
+  const handleSettingsPress = async () => {
+    await Linking.openSettings();
+    // Verification will be done automatically by continuousCheck
   };
 
-  const verifyLocation = async () => {
-    if (isVerifying.current) return;
-    isVerifying.current = true;
-    stopAllWatchers();
-
-    try {
-      let { status } = await Location.getForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        status = (await Location.requestForegroundPermissionsAsync()).status;
-      }
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is required.', [
-          { text: 'OK', onPress: exitApp },
-        ]);
-        isVerifying.current = false;
-        return;
-      }
-
-      let enabled = await Location.hasServicesEnabledAsync();
-      if (!enabled) {
-        Alert.alert(
-          'Turn On Location',
-          'Please enable location services (GPS) from your device settings.',
-          [
-            { text: 'Settings', onPress: () => Linking.openSettings() },
-            { text: 'Exit', onPress: exitApp, style: 'cancel' },
-          ]
-        );
-        isVerifying.current = false;
-        return;
-      }
-
-      locationWatcher.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.BestForNavigation },
-        (location) => {
-          if (location.mocked) {
-            stopAllWatchers();
-            Alert.alert('Mock Location', 'Mock locations are not allowed.', [
-              { text: 'OK', onPress: exitApp },
-            ]);
-          }
-        }
-      );
-
-      serviceStatusWatcher.current = setInterval(async () => {
-        if (isVerifying.current) return;
-
-        const stillEnabled = await Location.hasServicesEnabledAsync();
-        if (!stillEnabled) {
-          stopAllWatchers();
-          setLocationReady(false);
-          Alert.alert(
-            'Location Turned Off',
-            'Location is required to continue using this app.',
-            [
-              { text: 'Settings', onPress: () => Linking.openSettings() },
-              { text: 'Exit', onPress: exitApp, style: 'cancel' },
-            ]
-          );
-        }
-      }, 3000);
-
-      setLocationReady(true);
-    } catch (error) {
-      console.error("Location verification error:", error);
-      Alert.alert('Location Error', 'An unexpected error occurred. Please enable location manually.', [
-        { text: 'OK', onPress: exitApp },
-      ]);
-    } finally {
-      isVerifying.current = false;
-    }
+  const showTurnOnLocationPrompt = () => {
+    setAlertInfo({
+      title: 'Turn On Location',
+      message: 'Please enable location services (GPS) to continue.',
+      buttons: [
+        { text: 'Settings', onPress: handleSettingsPress },
+        { text: 'Exit', onPress: exitApp, style: 'cancel' },
+      ],
+    });
   };
 
-  if (!locationReady) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text style={{ marginTop: 10 }}>Verifying location...</Text>
-      </View>
-    );
-  }
+  if (locationReady) return <>{children}</>;
 
-  return <>{children}</>;
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#0000ff" />
+      <Text style={styles.loadingText}>Verifying location...</Text>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={alertInfo !== null}
+        onRequestClose={() => {}}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{alertInfo?.title}</Text>
+            <Text style={styles.modalMessage}>{alertInfo?.message}</Text>
+
+            {isVerifying ? (
+              <View>
+                <ActivityIndicator size="large" color="#007BFF" />
+                <Text style={styles.verifyText}>Checking...</Text>
+              </View>
+            ) : (
+              <View style={styles.modalButtonContainer}>
+                {alertInfo?.buttons.map((button, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.modalButton,
+                      button.style === 'cancel' && styles.cancelButton,
+                    ]}
+                    onPress={button.onPress}
+                  >
+                    <Text style={styles.modalButtonText}>{button.text}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
 };
 
+// Styles
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: '#fff' },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: { marginTop: 10, fontSize: 16 },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
+  modalMessage: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 10,
+    marginHorizontal: 5,
+    backgroundColor: '#007BFF',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  cancelButton: { backgroundColor: '#6c757d' },
+  modalButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  verifyText :{ fontWeight: 'bold', fontSize: 16, marginTop: 10 },
 });
 
 export default LocationGuard;
