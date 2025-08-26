@@ -11,6 +11,8 @@ export async function authentication(username: string, password: string) {
   try {
     const myHeaders = new Headers();
     myHeaders.append('Content-Type', 'application/json');
+    myHeaders.append("Accept", "application/json");
+   
 
     const raw = JSON.stringify({
       username: username,
@@ -25,6 +27,8 @@ export async function authentication(username: string, password: string) {
     };
 
     const response = await fetch(url, requestOptions);
+
+    console.log('Login API response:', response);
 
     if (response.status === 401) {
       return {
