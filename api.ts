@@ -6,7 +6,10 @@ import formatDateToDDMMYYYY from './utils/format';
 
 export async function authentication(username: string, password: string) {
   // const url = `http://115.187.62.16:9999/HMSRestAPI/api/auth/authentication`;
-  const url = `${process.env.EXPO_PUBLIC_API_URL_AUTH}/authentication`;
+  const url = `${process.env.EXPO_PUBLIC_API_URL_AUTH}`;
+
+  console.log("🔍 API URL AUTH:", process.env.EXPO_PUBLIC_API_URL_AUTH);
+  console.log("🔍 Full URL:", url);
 
   try {
     const myHeaders = new Headers();
