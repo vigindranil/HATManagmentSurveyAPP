@@ -1412,7 +1412,7 @@ export default function Survey() {
                 ? 4
                 : undefined
             }
-            autoCapitalize={field.key === 'pan' ? 'characters' : 'none'}
+            autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
             multiline={field.multiline}
             numberOfLines={field.multiline ? 4 : 1}
             onChangeText={(text) => updateField(field.key, text)}
