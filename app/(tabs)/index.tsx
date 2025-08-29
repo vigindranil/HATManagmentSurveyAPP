@@ -21,6 +21,7 @@ import {
   ChartBar as BarChart3,
   Calendar,
   Target,
+  Store,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,7 +38,6 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { useDashboard } from '@/context/dashboard-context';
 
-
 const { width } = Dimensions.get('window');
 
 export default function Dashboard() {
@@ -46,10 +46,8 @@ export default function Dashboard() {
   const [totalSurveys, setTotalSurveys] = React.useState(156);
   const [dashboardData, setDashboardData] = useState<any>([]);
   const [stallData, setStallData] = useState<any>([]);
-  // User details state and fetch logic
   const [userDetails, setUserDetails] = useState<any>(null);
   const { needsRefresh } = useDashboard();
-
   const { setUser, setIsAuthenticated } = useAuth();
 
   React.useEffect(() => {
@@ -65,9 +63,7 @@ export default function Dashboard() {
     const fetchUser = async () => {
       try {
         const user1 = await AsyncStorage.getItem('user');
-        console.log(user1);
         if (user1) {
-          console.log('fetchuser1');
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2) {
@@ -100,16 +96,14 @@ export default function Dashboard() {
         setStallData(stallData?.data);
       }
     }
-
     load();
-  },[userDetails,needsRefresh]);
+  }, [userDetails, needsRefresh]);
 
   const stats = [
     {
       icon: FileText,
       title: 'Total Surveys',
       value: dashboardData?.total_survey?.toString() ?? '0',
-      // change: '+12%',
       color: '#2563EB',
       bgColor: '#EFF6FF',
       description: 'This month',
@@ -118,121 +112,56 @@ export default function Dashboard() {
       icon: MapPin,
       title: 'Today Survey',
       value: dashboardData?.today_survey?.toString() ?? '0',
-      // change: '+3',
       color: '#0891B2',
       bgColor: '#F0FDFA',
       description: 'This Month',
     },
-    // {
-    //   icon: Clock,
-    //   title: 'Total Pending Verification',
-    //   value: dashboardData?.total_pending_verification?.toString() ?? '0',
-    //   // change: '+18%',
-    //   color: '#059669',
-    //   bgColor: '#F0FDF4',
-    //   description: 'Users',
-    // },
-    // {
-    //   icon: Clock,
-    //   title: 'Pending Sync',
-    //   value: pendingSurveys.length.toString(),
-    //   change: pendingSurveys.length > 0 ? 'Offline' : 'Synced',
-    //   color: '#DC2626',
-    //   bgColor: '#FEF2F2',
-    //   description: 'Offline surveys',
-    // },
   ];
 
-  const recentSurveys = [
-    {
-      id: 1,
-      location: 'Kolkata Municipal Area',
-      status: 'Completed',
-      date: '2 hours ago',
-      progress: 100,
-      stallCount: 12,
-    },
-    {
-      id: 2,
-      location: 'Howrah District',
-      status: 'In Progress',
-      date: '1 day ago',
-      progress: 65,
-      stallCount: 8,
-    },
-    {
-      id: 3,
-      location: 'North 24 Parganas',
-      status: 'Pending',
-      date: '2 days ago',
-      progress: 0,
-      stallCount: 15,
-    },
-  ];
-
-  const quickActions = [
-    { icon: Plus, title: 'New Survey', color: '#2563EB', route: '/survey' },
-    {
-      icon: BarChart3,
-      title: 'Analytics',
-      color: '#7C3AED',
-      route: '/reports',
-    },
-    { icon: Calendar, title: 'Schedule', color: '#059669', route: '/reports' },
-    { icon: Target, title: 'Goals', color: '#DC2626', route: '/reports' },
-  ];
-
-  const getStatusColor = (status: string) => {
+  // --- COLOR & ICON LOGIC ---
+  const getStatusDetails = (status: string) => {
     switch (status) {
       case 'Completed':
-        return '#059669';
+        return {
+          color: '#059669', // Emerald 600
+          bgColor: '#F0FDF4', // Emerald 50
+          icon: CheckCircle,
+          gradient: ['#ffffff', '#F0FDF4'],
+        };
       case 'In Progress':
-        return '#0891B2';
+        return {
+          color: '#0891B2', // Cyan 600
+          bgColor: '#F0FDFA', // Cyan 50
+          icon: Clock,
+          gradient: ['#ffffff', '#F0FDFA'],
+        };
       case 'Pending':
-        return '#DC2626';
+        return {
+          color: '#DC2626', // Red 600
+          bgColor: '#FEF2F2', // Red 50
+          icon: Clock,
+          gradient: ['#ffffff', '#FEF2F2'],
+        };
       default:
-        return '#6b7280';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return CheckCircle;
-      case 'In Progress':
-        return Clock;
-      case 'Pending':
-        return Clock;
-      default:
-        return Clock;
-    }
-  };
-
-  const getStatusBgColor = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return '#F0FDF4';
-      case 'In Progress':
-        return '#F0FDFA';
-      case 'Pending':
-        return '#FEF2F2';
-      default:
-        return '#F8FAFC';
+        return {
+          color: '#6B7280', // Slate 500
+          bgColor: '#F8FAFC', // Slate 50
+          icon: Clock,
+          gradient: ['#ffffff', '#F8FAFC'],
+        };
     }
   };
 
   return (
     <>
       <StatusBar
-        backgroundColor="green" // ✅ status bar will be green
-        barStyle="dark-content" // ✅ white icons/text
-        translucent={false} // ✅ important!
+        backgroundColor="green"
+        barStyle="dark-content"
+        translucent={false}
       />
       <SafeAreaView style={styles.container}>
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Offline Indicator */}
           <OfflineIndicator />
-          {/* Header with Gradient */}
           <LinearGradient
             colors={['#1E40AF', '#2563EB', '#3B82F6']}
             style={styles.header}
@@ -250,7 +179,6 @@ export default function Dashboard() {
             </View>
           </LinearGradient>
 
-          {/* Quick Actions */}
           <View style={styles.ctaContainer}>
             <TouchableOpacity
               style={styles.newSurveyButton}
@@ -279,7 +207,6 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
 
-          {/* Stats Cards */}
           <View style={styles.statsContainer}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <View style={styles.statsGrid}>
@@ -294,11 +221,6 @@ export default function Dashboard() {
                     >
                       <stat.icon size={20} color={stat.color} />
                     </View>
-                    {/* <View style={styles.statChange}>
-                      <Text style={[styles.changeText, { color: stat.color }]}>
-                        {stat.change}
-                      </Text>
-                    </View> */}
                   </View>
                   <Text style={styles.statValue}>{stat.value}</Text>
                   <Text style={styles.statTitle}>{stat.title}</Text>
@@ -308,9 +230,6 @@ export default function Dashboard() {
             </View>
           </View>
 
-          {/* New Survey CTA */}
-
-          {/* Recent Surveys */}
           <View style={styles.recentSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Surveys</Text>
@@ -318,47 +237,59 @@ export default function Dashboard() {
                 <Text style={styles.seeAllText}>See All</Text>
               </TouchableOpacity>
             </View>
-
+            
             {stallData && stallData.length > 0 ? (
               stallData.map((survey: any) => {
-                const StatusIcon = getStatusIcon(survey.status);
+                const statusDetails = getStatusDetails(survey.status);
+                const StatusIcon = statusDetails.icon;
+
                 return (
                   <TouchableOpacity
                     key={survey.market_id}
-                    style={styles.surveyCard}
-                    activeOpacity={0.7}
+                    style={styles.surveyCardWrapper}
+                    activeOpacity={0.8}
                   >
-                    <View style={styles.surveyCardContent}>
+                    <LinearGradient
+                      colors={statusDetails.gradient}
+                      style={[
+                        styles.surveyCard,
+                        { borderLeftColor: statusDetails.color },
+                      ]}
+                    >
+                      {/* --- UPDATED ICON CONTAINER --- */}
+                      <View
+                        style={[
+                          styles.surveyIconContainer,
+                          { backgroundColor: '#EFF6FF' }, // Always light blue
+                        ]}
+                      >
+                        {/* --- ICON is now always blue --- */}
+                        <Store size={22} color="#2563EB" />
+                      </View>
                       <View style={styles.surveyInfo}>
-                        <View style={styles.surveyHeader}>
-                          <Text style={styles.surveyLocation}>
-                            {survey.market_name}
-                          </Text>
-                          <Text style={styles.surveyDate}>{survey.date}</Text>
-                        </View>
-
+                        <Text style={styles.surveyLocation} numberOfLines={1}>
+                          {survey.market_name}
+                        </Text>
                         <View style={styles.surveyMeta}>
-                          <Text style={styles.stallCount}>
-                            {survey.number_of_stalls} stalls
-                          </Text>
+                          <View style={styles.metaItem}>
+                            <Users size={14} color={statusDetails.color} />
+                            <Text style={styles.stallCount}>
+                              <Text style={{ fontWeight: '600' }}>
+                                {survey.number_of_stalls}
+                              </Text>{' '}
+                              stalls
+                            </Text>
+                          </View>
                           <View
                             style={[
                               styles.surveyStatus,
-                              {
-                                backgroundColor: getStatusBgColor(
-                                  survey.status
-                                ),
-                              },
+                              { backgroundColor: statusDetails.bgColor },
                             ]}
                           >
-                            <StatusIcon
-                              size={14}
-                              color={getStatusColor(survey.status)}
-                            />
                             <Text
                               style={[
                                 styles.statusText,
-                                { color: getStatusColor(survey.status) },
+                                { color: statusDetails.color },
                               ]}
                             >
                               {survey.status}
@@ -366,7 +297,7 @@ export default function Dashboard() {
                           </View>
                         </View>
                       </View>
-                    </View>
+                    </LinearGradient>
                   </TouchableOpacity>
                 );
               })
@@ -397,7 +328,8 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    marginInline: 10,
+    marginHorizontal: 10,
+    marginTop: 10,
     marginBottom: 20,
   },
   headerContent: {
@@ -435,38 +367,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#BFDBFE',
     fontWeight: '500',
-  },
-  quickActionsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickActionCard: {
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  quickActionGradient: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '600',
-    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 20,
@@ -520,16 +420,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statChange: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-    backgroundColor: '#F0FDF4',
-  },
-  changeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
   statValue: {
     fontSize: 28,
     fontWeight: '800',
@@ -554,7 +444,7 @@ const styles = StyleSheet.create({
   newSurveyButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#2563EB',
+    shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -595,83 +485,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-  surveyCard: {
-    backgroundColor: '#ffffff',
+
+  // --- STALL DATA CARD STYLES ---
+  surveyCardWrapper: {
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
+    marginBottom: 14,
+    shadowColor: '#475569',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  surveyCardContent: {
+  surveyCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    padding: 14,
+    borderRadius: 16,
+    borderLeftWidth: 5,
+  },
+  surveyIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
   },
   surveyInfo: {
     flex: 1,
   },
-  surveyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
   surveyLocation: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-    flex: 1,
-    marginRight: 8,
-  },
-  surveyDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    fontWeight: '500',
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 10,
   },
   surveyMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   stallCount: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '400',
+    marginLeft: 6,
   },
   surveyStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  progressContainer: {
-    marginTop: 4,
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#0891B2',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '700',
+    marginLeft: 5,
   },
 });

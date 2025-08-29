@@ -63,7 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser) {
           const parsedUser: User = JSON.parse(storedUser);
 
-          if (parsedUser?.token && isTokenValid(parsedUser.token)) {
+          if (parsedUser?.token && isTokenValid(parsedUser.token)){
+            setAuthToken(parsedUser.token);
             setUser(parsedUser);
             setIsAuthenticated(true);
           } else {

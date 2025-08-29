@@ -1,20 +1,24 @@
 import { getAuthToken } from './context/tokenManager';
 import formatDateToDDMMYYYY from './utils/format';
+import Constants from 'expo-constants';
+
+
+console.log("constants", Constants?.expoConfig?.extra?.API_URL_AUTH);
+console.log("constants", Constants?.expoConfig?.extra?.BASE_URL);
 
 
 // login
 
 export async function authentication(username: string, password: string) {
   // const url = `http://115.187.62.16:9999/HMSRestAPI/api/auth/authentication`;
-  const url = `${process.env.EXPO_PUBLIC_API_URL_AUTH}`;
+  const url = process.env.EXPO_PUBLIC_API_URL_AUTH ? `${process.env.EXPO_PUBLIC_API_URL_AUTH}` : Constants?.expoConfig?.extra?.API_URL_AUTH;
 
   console.log("🔍 API URL AUTH:", process.env.EXPO_PUBLIC_API_URL_AUTH);
-  console.log("🔍 Full URL:", url);
+  
 
   try {
     const myHeaders = new Headers();
     myHeaders.append('Content-Type', 'application/json');
-    myHeaders.append("Accept", "application/json");
    
 
     const raw = JSON.stringify({
@@ -56,7 +60,7 @@ export async function authentication(username: string, password: string) {
 export async function getAllDistrictList() {
 
   // const url =  'http://115.187.62.16:9999/HMSRestAPI/api/user/getAllDistrictList'
-   const url =  `${process.env.EXPO_PUBLIC_BASE_URL}/getAllDistrictList`
+   const url =  process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllDistrictList` : Constants?.expoConfig?.extra?.BASE_URL+"/getAllDistrictList";
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(
@@ -90,7 +94,7 @@ export async function getPoliceStationsByDistrictId(
   districtId: string | number
 ) {
 
-   const url =`${process.env.EXPO_PUBLIC_BASE_URL}/getThanaListByDistrictID?DistrictID=${districtId}`
+   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getThanaListByDistrictID?DistrictID=${districtId}` : Constants?.expoConfig?.extra?.BASE_URL+`/getThanaListByDistrictID?DistrictID=${districtId}`;
 
 
 
@@ -126,7 +130,7 @@ export async function getPoliceStationsByDistrictId(
 
 export async function getMouzaListByThanaID(ThanaID: string | number) {
 
-   const url =`${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}`
+   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getMouzaListByThanaID?ThanaID=${ThanaID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(
@@ -162,7 +166,7 @@ export async function getAllHaatDetailsByDistrictID(
 ) {
 
 
-   const url =`${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
+   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(
@@ -195,7 +199,7 @@ export async function getAllHaatDetailsByDistrictID(
 
 export async function saveSurveyOnline(surveyData: any) {
 
-  const url =`${process.env.EXPO_PUBLIC_BASE_URL}/saveSurveyDetails`
+  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/saveSurveyDetails` : Constants?.expoConfig?.extra?.BASE_URL+`/saveSurveyDetails`
   // const url =`http://192.168.0.235:9991/api/user/saveSurveyDetails`
 
   console.log(url);
@@ -435,9 +439,13 @@ export async function getDashboardCountBySurveyUserID(
 ) {
 
 
-   const url =`${process.env.EXPO_PUBLIC_BASE_URL}/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`
+   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`
+
+   console.log("url",url)
   try {
     const yourTokenVariable = getAuthToken();
+
+    console.log("token" , yourTokenVariable);
     const response = await fetch(
       url,
       {
@@ -471,7 +479,8 @@ export async function getNumberOfStallsPerMarketID(
 
 
 
-   const url =`${process.env.EXPO_PUBLIC_BASE_URL}/getNumberOfStallsPerMarketID?UserID=${UserID}`
+  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getNumberOfStallsPerMarketID?UserID=${UserID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getNumberOfStallsPerMarketID?UserID=${UserID}`;
+
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(

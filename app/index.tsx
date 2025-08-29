@@ -4,11 +4,12 @@ import { useAuth } from "@/context/auth-context";
 export default function IndexRedirect() {
   const { user, isAuthLoading } = useAuth();
 
-  if (isAuthLoading) return null; // splash already covers loading
+  if (isAuthLoading) return null; 
 
   if (!user) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  return <Redirect href="/(app)/index" />;
+  return <Redirect href="/(tabs)"/>;
+
 }

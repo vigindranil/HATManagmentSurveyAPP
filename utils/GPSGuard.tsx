@@ -13,6 +13,10 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 
+
+// --- Global ref to indicate if camera is open ---
+export const isCameraOpenRef = { current: false };
+
 interface AlertInfo {
   title: string;
   message: string;
@@ -33,76 +37,92 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const appState = useRef(AppState.currentState);
-  const isAlertVisible = useRef(false);
-
-  useEffect(() => {
-    isAlertVisible.current = alertInfo !== null;
-  }, [alertInfo]);
+  const locationEnabledRef = useRef<boolean | null>(null);
+  const verificationMutex = useRef(false); // prevent parallel checks
 
   const verifyAndShowPrompts = async () => {
-    try {
-      setIsVerifying(true);
+    if (verificationMutex.current || isCameraOpenRef.current) return; // skip if camera is open
+    verificationMutex.current = true;
+    setIsVerifying(true);
 
+    try {
       // 1. Permission check
       let { status } = await Location.getForegroundPermissionsAsync();
       if (status !== 'granted') {
-        const { status: newStatus } =
-          await Location.requestForegroundPermissionsAsync();
+        const { status: newStatus } = await Location.requestForegroundPermissionsAsync();
         if (newStatus !== 'granted') {
           setLocationReady(false);
           setAlertInfo({
             title: 'Permission Denied',
-            message:
-              'Location permission is required. Please grant permission in your settings.',
+            message: 'Location permission is required. Please grant permission in your settings.',
             buttons: [
               { text: 'Settings', onPress: handleSettingsPress },
               { text: 'Exit', onPress: exitApp, style: 'cancel' },
             ],
           });
-          setIsVerifying(false);
           return;
         }
       }
 
-      // 2. Location services
+      // 2. Location services check
       const enabled = await Location.hasServicesEnabledAsync();
+      locationEnabledRef.current = enabled;
       if (!enabled) {
         setLocationReady(false);
         setAlertInfo({
           title: 'Location Error',
-          message: 'Your location is turned off.',
-          buttons: [{ text: 'OK', onPress: showTurnOnLocationPrompt }],
+          message: 'Your location is turned off. Please turn it on to continue.',
+          buttons: [
+            { text: 'Settings', onPress: handleSettingsPress },
+            { text: 'Exit', onPress: exitApp, style: 'cancel' },
+          ],
         });
-        setIsVerifying(false);
         return;
       }
 
-      // 3. Mock location check
-      const location = await Location.getCurrentPositionAsync();
-      if (location.mocked) {
-        setLocationReady(false);
-        setAlertInfo({
-          title: 'Mock Location',
-          message:
-            'Mock locations are not allowed. Please disable them to continue.',
-          buttons: [{ text: 'Exit', onPress: exitApp }],
+      // 3. Mock location check (safe call)
+      try {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Lowest,
+          mayShowUserSettingsDialog: false,
         });
-        setIsVerifying(false);
+
+        if (location?.mocked) {
+          setLocationReady(false);
+          setAlertInfo({
+            title: 'Mock Location',
+            message: 'Mock locations are not allowed. Please disable them to continue.',
+            buttons: [{ text: 'Exit', onPress: exitApp }],
+          });
+          return;
+        }
+      } catch (err: any) {
+        if (
+          err?.message?.includes('location provider is unavailable') ||
+          err?.message?.includes('E_LOCATION_TIMEOUT') ||
+          err?.message?.includes('E_LOCATION_UNAVAILABLE')
+        ) {
+          console.log('Location temporarily unavailable, retrying silently...');
+        } else {
+          setLocationReady(false);
+          setAlertInfo({
+            title: 'Location Error',
+            message: 'Could not fetch location. Please ensure your GPS has a clear signal and try again.',
+            buttons: [
+              { text: 'Retry', onPress: verifyAndShowPrompts },
+              { text: 'Exit', onPress: exitApp },
+            ],
+          });
+        }
         return;
       }
 
       // Success
       setAlertInfo(null);
       setLocationReady(true);
-      setIsVerifying(false);
-    } catch (error) {
-      setLocationReady(false);
-      setAlertInfo({
-        title: 'Location Error',
-        message:
-          'An unexpected error occurred. Please check your location settings.',
-        buttons: [{ text: 'Exit', onPress: exitApp }],
-      });
+
+    } finally {
+      verificationMutex.current = false;
       setIsVerifying(false);
     }
   };
@@ -121,49 +141,31 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
     return () => subscription.remove();
   }, []);
 
-  // Continuous check (detect GPS from anywhere)
+  // Continuous lightweight service check
   useEffect(() => {
     const continuousCheck = async () => {
+      if (isCameraOpenRef.current) return; // skip check if camera is open
       const enabled = await Location.hasServicesEnabledAsync();
-      if (enabled && isAlertVisible.current) {
-        setIsVerifying(true);
-        await verifyAndShowPrompts();
-      } else if (!enabled && !isAlertVisible.current) {
-        await verifyAndShowPrompts();
+      if (enabled !== locationEnabledRef.current) {
+        verifyAndShowPrompts();
       }
     };
 
-    verifyAndShowPrompts();
-    const intervalId = setInterval(continuousCheck, 1000);
+    verifyAndShowPrompts(); // initial check
+    const intervalId = setInterval(continuousCheck, 2000);
     return () => clearInterval(intervalId);
   }, []);
 
   const exitApp = () => {
-    if (Platform.OS === 'android') {
-      BackHandler.exitApp();
-    } else {
-      setAlertInfo({
-        title: 'Exit App',
-        message: 'Please close the app manually.',
-        buttons: [],
-      });
-    }
+    if (Platform.OS === 'android') BackHandler.exitApp();
+    else setAlertInfo({ title: 'Exit App', message: 'Please close the app manually.', buttons: [] });
   };
 
   const handleSettingsPress = async () => {
-    await Linking.openSettings();
-    // Verification will be done automatically by continuousCheck
-  };
-
-  const showTurnOnLocationPrompt = () => {
-    setAlertInfo({
-      title: 'Turn On Location',
-      message: 'Please enable location services (GPS) to continue.',
-      buttons: [
-        { text: 'Settings', onPress: handleSettingsPress },
-        { text: 'Exit', onPress: exitApp, style: 'cancel' },
-      ],
-    });
+    
+    // await Linking.openURL("android.settings.LOCATION_SOURCE_SETTINGS"); 
+    await Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+   
   };
 
   if (locationReady) return <>{children}</>;
@@ -198,7 +200,10 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
                       styles.modalButton,
                       button.style === 'cancel' && styles.cancelButton,
                     ]}
-                    onPress={button.onPress}
+                    onPress={() => {
+                      if (button.text !== 'Settings') setAlertInfo(null);
+                      button.onPress();
+                    }}
                   >
                     <Text style={styles.modalButtonText}>{button.text}</Text>
                   </TouchableOpacity>
@@ -214,45 +219,17 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
 
 // Styles
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   loadingText: { marginTop: 10, fontSize: 16 },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  modalContent: {
-    width: '80%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
-    elevation: 5,
-  },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { width: '80%', backgroundColor: 'white', borderRadius: 10, padding: 20, alignItems: 'center', elevation: 5 },
   modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
   modalMessage: { fontSize: 16, textAlign: 'center', marginBottom: 20 },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    padding: 10,
-    marginHorizontal: 5,
-    backgroundColor: '#007BFF',
-    borderRadius: 5,
-    alignItems: 'center',
-  },
+  modalButtonContainer: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
+  modalButton: { flex: 1, padding: 10, marginHorizontal: 5, backgroundColor: '#007BFF', borderRadius: 5, alignItems: 'center' },
   cancelButton: { backgroundColor: '#6c757d' },
   modalButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  verifyText :{ fontWeight: 'bold', fontSize: 16, marginTop: 10 },
+  verifyText: { fontWeight: 'bold', fontSize: 16, marginTop: 10 },
 });
 
 export default LocationGuard;

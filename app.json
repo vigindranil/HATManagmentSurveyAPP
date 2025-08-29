@@ -1,10 +1,11 @@
 {
   "expo": {
-    "name": "HaatManagementSurvey",
+    "name": "HMSurvey",
     "slug": "bolt-expo-nativewind",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+    "jsEngine": "hermes",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -28,6 +29,7 @@
           "locationWhenInUsePermission": "This app requires your location to function correctly."
         }
       ]
+     
     ],
     "experiments": {
       "typedRoutes": true
@@ -41,6 +43,8 @@
     },
     "extra": {
       "router": {},
+      "API_URL_AUTH": "https://wbassetmgmtservice.link/HMSRestAPI/api/auth/authentication",
+      "BASE_URL": "https://wbassetmgmtservice.link/HMSRestAPI/api/user",
       "eas": {
         "projectId": "b6a9a2a9-a35b-4f95-b5b5-f65600cdae59"
       }

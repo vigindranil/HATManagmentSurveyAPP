@@ -18,6 +18,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AlertNotificationRoot } from 'react-native-alert-notification';
 import CustomAlert from '@/components/CustomAlert';
+import { isCameraOpenRef } from '@/utils/GPSGuard';
+
 
 import {
   ChevronLeft,
@@ -148,6 +150,7 @@ export default function Survey() {
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2) {
             updateField('user_id', String(parsedUser2.UserID));
+            updateField('citizenship', 'Indian');
             setUser(parsedUser2);
           }
         }
@@ -649,7 +652,12 @@ export default function Survey() {
 
     // If the alert was a success, reset the form
     if (alertInfo.type === 'success') {
-      setSurveyData({ user_id: user ? String(user.UserID) : '' });
+      // setSurveyData({ user_id: user ? String(user.UserID) : '' });
+      // Ensure citizenship is set to 'Indian' after success
+      setSurveyData((prev) => ({
+        user_id: user ? String(user.UserID) : '',
+        citizenship: 'Indian',
+      }));
       setCurrentStep(0);
     }
     // if (alertInfo.type === 'success' || alertInfo.type === 'error') {
@@ -686,6 +694,7 @@ export default function Survey() {
         {
           text: '📷 Camera',
           onPress: async () => {
+            isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
               setLoadImage(true);
@@ -733,12 +742,14 @@ export default function Survey() {
             } finally {
               setLoadingImage(null);
               setLoadImage(false);
+              isCameraOpenRef.current = false;
             }
           },
         },
         {
           text: '🖼️ Device Gallery',
           onPress: async () => {
+            isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
               setLoadImage(true);
@@ -785,6 +796,7 @@ export default function Survey() {
             } finally {
               setLoadingImage(null);
               setLoadImage(false);
+              isCameraOpenRef.current = false;
             }
           },
         },
@@ -801,6 +813,7 @@ export default function Survey() {
         {
           text: '📷 Camera',
           onPress: async () => {
+            isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
               setLoadImage(true);
@@ -829,12 +842,14 @@ export default function Survey() {
             } finally {
               setLoadingImage(null);
               setLoadImage(false);
+              isCameraOpenRef.current = false;
             }
           },
         },
         {
           text: '🖼️ Device Gallery',
           onPress: async () => {
+            isCameraOpenRef.current = false;
             try {
               setLoadingImage(fieldKey);
               setLoadImage(true);
@@ -865,6 +880,7 @@ export default function Survey() {
             } finally {
               setLoadingImage(null);
               setLoadImage(false);
+              isCameraOpenRef.current = false;
             }
           },
         },
@@ -1041,7 +1057,7 @@ export default function Survey() {
         ...fieldsToClearPrevious,
       ];
       allFieldsToClear.forEach((field) => {
-        if (field.key !== 'user_id') {
+        if (field.key !== 'user_id' && field.key !== 'citizenship') {
           delete (newData as Partial<SurveyData>)[
             field.key as keyof SurveyData
           ];
@@ -1118,7 +1134,7 @@ export default function Survey() {
     if (
       field.key === 'user_id' ||
       field.key === 'latitude' ||
-      field.key === 'longitude'
+      field.key === 'longitude' 
     )
       return null;
 
@@ -1381,10 +1397,11 @@ export default function Survey() {
             style={[
               styles.textInput,
               field.multiline && styles.textInputMultiline,
+              field.key === 'citizenship' && { opacity: 0.85 },
             ]}
             value={(value as string) || ''}
             placeholder={field.placeholder}
-            editable={field.key !== 'user_id'}
+            editable={field.key !== 'user_id' && field.key !== 'citizenship'}
             placeholderTextColor="#9CA3AF"
             keyboardType={
               numericFields.includes(field.key) ? 'numeric' : 'default'
@@ -1410,6 +1427,10 @@ export default function Survey() {
                 ? 6
                 : field.key === 'property_tax_payment_to_year'
                 ? 4
+                : field.key === 'land_valuation_amount'
+                ? 10
+                : field.key === 'area_com_sqft'
+                ? 6
                 : undefined
             }
             autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
@@ -1477,6 +1498,14 @@ export default function Survey() {
           onConfirm={handleAlertConfirm}
         />
       )}
+
+     <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+
+
+
       <LinearGradient
         colors={[currentStepData.color, currentStepData.color + '90']}
         style={styles.header}
@@ -1521,10 +1550,7 @@ export default function Survey() {
 
       <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+     
         <ScrollView
           ref={scrollViewRef}
           style={styles.formContainer}
@@ -1534,7 +1560,7 @@ export default function Survey() {
             {currentStepData.fields.map(renderField)}
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+     
 
       <View style={styles.buttonContainer}>
         {currentStep > 0 && (
@@ -1572,6 +1598,7 @@ export default function Survey() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
