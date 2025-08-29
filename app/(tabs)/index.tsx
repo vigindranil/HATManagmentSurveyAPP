@@ -87,7 +87,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function load() {
-      if (userDetails) {
+      if (userDetails && isOnline) {
         const Data = await getDashboardCountBySurveyUserID(userDetails.UserID);
         const stallData = await getNumberOfStallsPerMarketID(
           userDetails.UserID
@@ -95,9 +95,13 @@ export default function Dashboard() {
         setDashboardData(Data?.data);
         setStallData(stallData?.data);
       }
+      else{
+        setDashboardData([]);
+        setStallData([]);
+      }
     }
     load();
-  }, [userDetails, needsRefresh]);
+  }, [userDetails,needsRefresh,isOnline]);
 
   const stats = [
     {
