@@ -11,17 +11,101 @@ import {
 
 const { width } = Dimensions.get("window");
 
-export default function CustomAlert({ type = "success", message, onConfirm }) {
+export default function CustomAlert({ type = "success", message, onConfirm,onCancel }) {
   const [visible, setVisible] = useState(true);
   const scaleAnim = new Animated.Value(0.8);
 
-  const isSuccess = type === "success";
-  const colors = {
-    bg: isSuccess ? "#2563EB" : "#DC2626", 
-    badge: isSuccess ? "#3B82F6" : "#EF4444",
-    emoji: isSuccess ? "🎉" : "❌",
-    title: isSuccess ? "Success!" : "Error!",
-  };
+  let colors;
+  switch (type) {
+    case "success":
+      colors = {
+        bg: "#2563EB", // Blue
+        badge: "#3B82F6",
+        emoji: "🎉",
+        title: "Success!",
+      };
+      break;
+    case "error":
+      colors = {
+        bg: "#DC2626", // Red
+        badge: "#EF4444",
+        emoji: "❌",
+        title: "Error!",
+      };
+      break;
+    case "Invalid":
+      colors = {
+        bg: "#F59E42", // Orange-ish for warning
+        badge: "#FBBF24", // Amber-400
+        emoji: "⚠️",
+        title: "Invalid!",
+      };
+      break;
+    case "Permission Denied":
+      colors = {
+        bg: "#F87171", // Light Red
+        badge: "#DC2626", // Deep Red
+        emoji: "🚫",
+        title: "Permission Denied",
+      };
+      break;
+    case "Autofill Successful":
+      colors = {
+        bg: "#34D399", // Green
+        badge: "#10B981", // Green-600
+        emoji: "🤖",
+        title: "Autofill Successful",
+      };
+      break;
+    case "Something went Wrong":
+      colors = {
+        bg: "#F59E42", // Orange
+        badge: "#EA580C",
+        emoji: "⚠️",
+        title: "Something went Wrong",
+      };
+      break;
+    case "Survey Failure":
+      colors = {
+        bg: "#F87171", // Light Red
+        badge: "#EF4444",
+        emoji: "📋",
+        title: "Survey Failure",
+      };
+      break;
+    case "User Not Found":
+      colors = {
+        bg: "#F59E42", // Yellow-Orange
+        badge: "#FACC15",
+        emoji: "🙅‍♂️",
+        title: "User Not Found",
+      };
+      break;
+    case "User Details Unavailable":
+      colors = {
+        bg: "#A5B4FC", // Indigo-100
+        badge: "#6366F1", // Indigo-500
+        emoji: "🙇‍♂️",
+        title: "User Details Unavailable",
+      };
+      break;
+    case "notfound":
+    case "not_found":
+      colors = {
+        bg: "#FACC15",
+        badge: "#e5e7eb",
+        emoji: "😕",
+        title: "Not Found",
+      };
+      break;
+    default:
+      colors = {
+        bg: "#FACC15",
+        badge: "#3B8298",
+        emoji: "😕",
+        title: typeof type === "string" ? type : "Notice",
+      };
+  }
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -57,16 +141,29 @@ export default function CustomAlert({ type = "success", message, onConfirm }) {
           {/* Message */}
           <Text style={styles.message}>{message}</Text>
 
-          {/* Button */}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              setVisible(false);
-              onConfirm && onConfirm();
-            }}
-          >
-            <Text style={styles.buttonText}>OK</Text>
-          </TouchableOpacity>
+          {/* Buttons Row (Single Line, Centered) */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginTop: 5 }}>
+            {typeof onCancel === 'function' && (
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#f87171', marginRight: 12, minWidth: 90 }]}
+                onPress={() => {
+                  setVisible(false);
+                  onCancel && onCancel();
+                }}
+              >
+                <Text style={[styles.buttonText, { color: '#fff', textAlign: 'center' }]}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.button, { minWidth: 90 }]}
+              onPress={() => {
+                setVisible(false);
+                onConfirm && onConfirm();
+              }}
+            >
+              <Text style={[styles.buttonText, { textAlign: 'center' }]}>OK</Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </View>
     </Modal>

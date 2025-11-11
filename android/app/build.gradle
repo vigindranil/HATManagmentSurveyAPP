@@ -130,6 +130,22 @@ android {
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            // Get app name and version
+            def appName = "HMSurvey"
+            def versionName = variant.versionName
+            def versionCode = variant.versionCode
+            def buildType = variant.buildType.name
+
+            // Custom file name
+            def newApkName = "${appName}_v${versionName}_b${versionCode}_${buildType}.apk"
+
+            // Apply it
+            outputFileName = newApkName
+        }
+    }
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`

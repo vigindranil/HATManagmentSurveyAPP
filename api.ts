@@ -130,6 +130,8 @@ export async function getPoliceStationsByDistrictId(
 
 export async function getMouzaListByThanaID(ThanaID: string | number) {
 
+   
+
    const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getMouzaListByThanaID?ThanaID=${ThanaID}`;
   try {
     const yourTokenVariable = getAuthToken();
@@ -154,6 +156,7 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
 
     const data = await response.json();
 
+
     return data;
   } catch (error) {
     console.log('Error fetching mouza list:', error.message);
@@ -161,11 +164,91 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
   }
 }
 
+
+
+
+export async function getAdsrByThanaId(ThanaID: string | number) {
+  
+
+  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getADSRName?ThanaID=${ThanaID}`;
+
+  // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getADSRName?ThanaID=${ThanaID}`
+ try {
+  console.log("adsrurl",url);
+   const yourTokenVariable = getAuthToken();
+   const response = await fetch(
+    url,
+     {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${yourTokenVariable}`,
+       },
+     }
+   );
+
+   if (response.status === 401) {
+     throw { status: 401, message: 'Unauthorized: Please login again.' };
+   }
+
+   if (!response.ok) {
+     throw { status: response.status, message: "API Error" };
+   }
+
+   const data = await response.json();
+
+   
+
+   return data;
+ } catch (error) {
+   console.log('Error adsr  list:', error.message);
+   throw error;
+ }
+}
+
+
+
+    export async function getJlNoByThanaId(ThanaID: string | number) {
+      
+
+      const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getJLNO?ThanaID=${ThanaID}`;
+      // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getJLNO?ThanaID=${ThanaID}`
+    try {
+      const yourTokenVariable = getAuthToken();
+      const response = await fetch(
+        url,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${yourTokenVariable}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        throw { status: 401, message: 'Unauthorized: Please login again.' };
+      }
+
+      if (!response.ok) {
+        throw { status: response.status, message: "API Error" };
+      }
+
+      const data = await response.json();
+
+      
+
+
+      return data;
+    } catch (error) {
+      console.log('Error jlno list:', error.message);
+      throw error;
+    }
+    }
+
 export async function getAllHaatDetailsByDistrictID(
   DistrictID: string | number
 ) {
-
-
    const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
   try {
     const yourTokenVariable = getAuthToken();
@@ -230,7 +313,7 @@ export async function saveSurveyOnline(surveyData: any) {
       citizenship: surveyData?.citizenship || "",
       pin_code: parseInt(surveyData?.pin_code) || 0,
       is_within_family: surveyData?.is_within_family || false,
-      transfer_relationship: surveyData?.transfer_relationship || "",
+      transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
       document_type: surveyData?.documentTypes || "",
       pan: surveyData?.pan || "",
       previous_license_no: surveyData?.previous_license_no || "",
@@ -255,7 +338,7 @@ export async function saveSurveyOnline(surveyData: any) {
       plot_no: surveyData?.plot_no || "",
       // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
       area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
-      direction: surveyData?.direction || "",
+      // direction: surveyData?.direction || "", direction commented out
       latitude: parseFloat(surveyData?.latitude) || 0.0,
       longitude: parseFloat(surveyData?.longitude) || 0.0,
       land_valuation_amount : parseFloat(surveyData?.land_valuation_amount) || 0.0,
@@ -403,7 +486,7 @@ export async function saveSurveyOnline(surveyData: any) {
     };
 
     // const response = await fetch(
-    //     'http://192.168.0.229:9999/api/user/saveSurveyDetails',
+    //     'http://192.168.0.210:9998/api/user/saveSurveyDetails',
     //     requestOptions
     //   );
 
@@ -412,7 +495,7 @@ export async function saveSurveyOnline(surveyData: any) {
       requestOptions
     );
 
-    console.log("response", response);
+    
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
@@ -508,4 +591,39 @@ export async function getNumberOfStallsPerMarketID(
     console.log('Error fetching haat details:', error.message);
     throw error;
   }
+}
+
+
+export async function getUserDetailsByPhoneNumber(phoneNo: string | number) {
+  
+
+  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}` : Constants?.expoConfig?.extra?.BASE_URL+`/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`;
+  // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getUserDetailsByPhoneNumber?MobileNumber={ThanaID}`
+ try {
+   const yourTokenVariable = getAuthToken();
+   const response = await fetch(
+    url,
+     {
+       method: 'POST',
+       headers: {
+         'Content-Type': 'application/json',
+         Authorization: `Bearer ${yourTokenVariable}`,
+       },
+     }
+   );
+
+   if (response.status === 401) {
+     throw { status: 401, message: 'Unauthorized: Please login again.' };
+   }
+
+   if (!response.ok) {
+     throw { status: response.status, message: "API Error" };
+   }
+
+   const data = await response.json();
+   return data;
+ } catch (error) {
+   console.log('Error jlno list:', error.message);
+   throw error;
+ }
 }

@@ -85,6 +85,8 @@ export default function Dashboard() {
     fetchUser();
   }, []);
 
+  console.log("userdetails", userDetails);
+
   useEffect(() => {
     async function load() {
       if (userDetails && isOnline) {
@@ -172,14 +174,14 @@ export default function Dashboard() {
           >
             <View style={styles.headerContent}>
               <View>
-                <Text style={styles.headerGreeting}>Good Morning</Text>
-                <Text style={styles.headerTitle}>HAT Management</Text>
+                <Text style={styles.headerGreeting}>Welcome</Text>
+                <Text style={styles.headerTitle}>{userDetails?.UserFullName}</Text>
                 <Text style={styles.headerSubtitle}>Survey Dashboard</Text>
               </View>
-              <View style={styles.headerStats}>
+              {/* <View style={styles.headerStats}>
                 <Text style={styles.headerStatsNumber}>{totalSurveys}</Text>
                 <Text style={styles.headerStatsLabel}>Total Surveys</Text>
-              </View>
+              </View> */}
             </View>
           </LinearGradient>
 

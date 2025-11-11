@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -26,70 +25,108 @@ import { SurveyList } from '@/components/SurveyList';
 import { useAuth } from '../../context/auth-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CustomAlert from '@/components/CustomAlert';
+
+// Define the AlertInfo type locally since the type was missing and throwing a lint error
+type AlertInfo = {
+  visible: boolean;
+  type: 'success' | 'error' | 'warning' | 'info' | string;
+  message: string;
+  onConfirm?: () => void;
+  onCancel?: () => void;
+};
 
 export default function Settings() {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [darkMode, setDarkMode] = React.useState(false);
   // Create a user state to hold user information
-  const [userState, setUserState] = React.useState(null);
+  const [userState, setUserState] = React.useState<any>(null);
 
   const [showSurveyList, setShowSurveyList] = React.useState(false);
   const { clearAllData, pendingSurveys } = useOfflineStorage();
   const { setIsAuthenticated, setUser } = useAuth();
 
+  // CustomAlert state info
+  const [alertInfo, setAlertInfo] = useState<AlertInfo>({
+    visible: false,
+    type: 'success',
+    message: '',
+    onConfirm: undefined,
+    onCancel: undefined,
+  });
+
+  /**
+   * Custom alert confirm handler that calls the onConfirm handler from alertInfo and closes the alert.
+   */
+  const handleAlertConfirm = async () => {
+    if (alertInfo.onConfirm) {
+      await alertInfo.onConfirm();
+    }
+    setAlertInfo((prev) => ({
+      ...prev,
+      visible: false,
+    }));
+  };
+
+  /**
+   * Custom alert cancel handler that calls the onCancel handler from alertInfo (if any) and closes the alert.
+   */
+  const handleAlertCancel = () => {
+    if (alertInfo.onCancel) {
+      alertInfo.onCancel();
+    }
+    setAlertInfo((prev) => ({
+      ...prev,
+      visible: false,
+    }));
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const user1 = await AsyncStorage.getItem('user');
-        console.log(user1);
+        // console.log(user1);
         if (user1) {
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
-          if (parsedUser2) {
+          if (parsedUser2){
             setUserState(parsedUser2);
           }
         }
       } catch (error) {
         console.error('Error Users data', error);
-        //   if (error.status === 401) {
-        //     logout(); // 👈 handle it here
-        //   } else {
-        //     console.error('Error fetching dashboard data', error);
-        // }
       }
     };
     fetchUser();
   }, []);
 
   const handleClearData = () => {
-    Alert.alert(
-      'Clear All Data',
-      'This will delete all saved surveys. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: clearAllData,
-        },
-      ]
-    );
+    setAlertInfo({
+      visible: true,
+      type: 'warning',
+      message: 'This will delete all saved surveys. This action cannot be undone.',
+      onConfirm: () => {
+        clearAllData();
+        setAlertInfo((prev) => ({ ...prev, visible: false }));
+      },
+      onCancel: () => setAlertInfo((prev) => ({ ...prev, visible: false })),
+    });
   };
 
   const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          setUser(null);
-          setIsAuthenticated(false);
-          await AsyncStorage.removeItem('user');
-          router.replace('/(auth)/login');
-        },
+    setAlertInfo({
+      visible: true,
+      type: 'warning',
+      message: 'Are you sure you want to sign out?',
+      onConfirm: async () => {
+        setUser(null);
+        setIsAuthenticated(false);
+        await AsyncStorage.removeItem('user');
+        setAlertInfo((prev) => ({ ...prev, visible: false }));
+        router.replace('/(auth)/login');
       },
-    ]);
+      onCancel: () => setAlertInfo((prev) => ({ ...prev, visible: false })),
+    });
   };
 
   const settingsItems = [
@@ -222,6 +259,14 @@ export default function Settings() {
   }
   return (
     <SafeAreaView style={styles.container}>
+      {alertInfo.visible && (
+        <CustomAlert
+          type={alertInfo.type}
+          message={alertInfo.message}
+          onConfirm={handleAlertConfirm}
+          onCancel={handleAlertCancel}
+        />
+      )}
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
@@ -236,7 +281,7 @@ export default function Settings() {
           </View>
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userState?.UserFullName}</Text>
-            <Text style={styles.profileEmail}>john.doe@example.com</Text>
+            {/* <Text style={styles.profileEmail}>john.doe@example.com</Text> */}
           </View>
           <TouchableOpacity style={styles.editProfile}>
             <Text style={styles.editProfileText}>Edit</Text>

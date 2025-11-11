@@ -15,7 +15,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { AlertNotificationRoot } from 'react-native-alert-notification';
 import CustomAlert from '@/components/CustomAlert';
 import { isCameraOpenRef } from '@/utils/GPSGuard';
@@ -50,9 +50,12 @@ import {
   getMouzaListByThanaID,
   getAllHaatDetailsByDistrictID,
   saveSurveyOnline,
+  getJlNoByThanaId,
+  getAdsrByThanaId,
+  getUserDetailsByPhoneNumber
 } from '@/api';
-import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
+import *as ImagePicker from 'expo-image-picker';
+import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
@@ -123,6 +126,14 @@ interface SurveyData {
   land_valuation_amount: string;
 }
 
+// Define an interface for AlertInfo with a context property
+interface AlertInfo {
+  visible: boolean;
+  type: 'success' | 'error';
+  message: string;
+  context?: 'survey_submission' | 'autofill_success' | undefined; // Add a context to differentiate alerts
+}
+
 export default function Survey() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -132,10 +143,19 @@ export default function Survey() {
   const [user, setUser] = useState<any>(null);
   const [loadImage, setLoadImage] = useState<any>(false);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
-  const [alertInfo, setAlertInfo] = useState({
+  
+  const [adsrOptions, setAdsrOptions] = useState([]);
+  const [jlNOOptions, setJlNOOptions] = useState([]); // jlNOOptions now holds dropdown options for JL No
+
+  // NEW STATE: To track if autofill was successful for mobile number
+  const [mobileAutofillSuccessful, setMobileAutofillSuccessful] = useState(false);
+
+  // Initialize alertInfo with context
+  const [alertInfo, setAlertInfo] = useState<AlertInfo>({
     visible: false,
-    type: 'success',
+    type: 'success', // 'success' or 'error'
     message: '',
+    context: undefined, // Initialize context
   });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
   const { setNeedsRefresh } = useDashboard();
@@ -169,7 +189,7 @@ export default function Survey() {
 
   const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(new Date()); // Correct useState for date
   const [showPicker, setShowPicker] = useState(false);
  
   const [loadingImage, setLoadingImage] = useState<string | null>(null);
@@ -182,6 +202,15 @@ export default function Survey() {
   const documentTypes = [
     { key: '1', value: 'Aadhar' },
     { key: '2', value: 'Voter ID' },
+  ];
+  
+  const transferRelationshipOptions = [
+      { key: '3', value: 'Son' },
+      { key: '5', value: 'Mother' },
+      { key: '4', value: 'Father' },
+      { key: '1', value: 'Wife' },
+      { key: '2', value: 'Daughter' },
+      { key: '6', value: 'Others' },
   ];
 
   const steps = [
@@ -212,7 +241,7 @@ export default function Survey() {
         },
         {
           key: 'usesType',
-          label: 'Uses Type',
+          label: 'Usage Type',
           required: true,
           placeholder: 'Select Uses Type',
         },
@@ -225,6 +254,13 @@ export default function Survey() {
       bgColor: '#FFF7ED',
       description: 'Applicant personal and document information',
       fields: [
+        {
+          key: 'mobile',
+          label: 'Mobile Number',
+          required: true,
+          placeholder: 'Enter mobile number',
+          showFor: ['new', 'existing', 'transfer'],
+        },
         {
           key: 'name',
           label: 'Name',
@@ -244,13 +280,6 @@ export default function Survey() {
           label: 'Address',
           required: true,
           placeholder: 'Enter address',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'mobile',
-          label: 'Mobile Number',
-          required: true,
-          placeholder: 'Enter mobile number',
           showFor: ['new', 'existing', 'transfer'],
         },
         {
@@ -308,7 +337,7 @@ export default function Survey() {
         {
           key: 'trade_license_attached',
           label: 'Trade License (Attachment)',
-          required: false,
+          required: true,
           placeholder: 'Upload trade license',
           showFor: ['new', 'existing', 'transfer'],
           type: 'image',
@@ -316,16 +345,16 @@ export default function Survey() {
         {
           key: 'previous_license_no',
           label: 'Previous License No',
-          required: true,
+          required: true, 
           placeholder: 'Enter previous license number ',
-          showFor: ['existing'],
+          showFor: ['existing', 'transfer'],
         },
         {
           key: 'license_expiry_date',
           label: 'License Expiry Date',
           required: true,
           placeholder: 'Select license expiry date ',
-          showFor: ['existing'],
+          showFor: ['existing', 'transfer'],
           type: 'date',
         },
         {
@@ -333,7 +362,7 @@ export default function Survey() {
           label: 'Property Tax Paid Up To Year',
           required: true,
           placeholder: 'Enter year up to which property tax is paid ',
-          showFor: ['existing'],
+          showFor: ['existing', 'transfer'],
         },
         {
           key: 'is_within_family',
@@ -347,8 +376,9 @@ export default function Survey() {
           key: 'transfer_relationship',
           label: 'Transfer Relationship',
           required: true,
-          placeholder: 'Specify relationship ',
+          placeholder: 'Select relationship',
           showFor: ['transfer'],
+          type: 'dropdown', 
           dependsOn: { key: 'is_within_family', value: true },
         },
         {
@@ -356,6 +386,7 @@ export default function Survey() {
           label: 'Land Transfer Explanation',
           required: true,
           placeholder: 'Explain land transfer ',
+          multiline: true, // Mark as multiline
           showFor: ['transfer'],
         },
         {
@@ -399,13 +430,6 @@ export default function Survey() {
           type: 'image',
         },
         {
-          key: 'adsr_name',
-          label: 'ADSR Name',
-          required: true,
-          placeholder: 'Enter ADSR name',
-          showFor: ['transfer'],
-        },
-        {
           key: 'warision_certificate_attached',
           label: 'Warision Certificate (Attachment)',
           required: false,
@@ -416,7 +440,7 @@ export default function Survey() {
         {
           key: 'death_certificate_attached',
           label: 'Death Certificate (Attachment)',
-          required: true,
+          required: false,
           placeholder: 'Upload death certificate ',
           showFor: ['transfer'],
           type: 'image',
@@ -429,22 +453,6 @@ export default function Survey() {
           showFor: ['transfer'],
           type: 'image',
         },
-        // {
-        //   key: 'is_same_owner',
-        //   label: 'Is Same Owner',
-        //   required: true,
-        //   placeholder: 'Is the owner the same?',
-        //   showFor: ['rent'],
-        //   type: 'dropdown',
-        // },
-        // {
-        //   key: 'rented_to_whom',
-        //   label: 'Rented To Whom',
-        //   required: true,
-        //   placeholder: 'Enter the name of the person/entity rented to',
-        //   showFor: ['rent'],
-        //   dependsOn: { key: 'is_same_owner', value: false },
-        // },
       ],
     },
     {
@@ -479,6 +487,12 @@ export default function Survey() {
           placeholder: 'Select mouza',
         },
         {
+          key: 'adsr_name',
+          label: 'ADSR Name',
+          required: true,
+          placeholder: 'Select ADSR Office',
+        },
+        {
           key: 'stall_no',
           label: 'Stall No',
           required: true,
@@ -508,24 +522,18 @@ export default function Survey() {
           required: true,
           placeholder: 'Enter plot number',
         },
-        // {
-        //   key: 'area_dom_sqft',
-        //   label: 'Area (Domestic, sqft)',
-        //   required: true,
-        //   placeholder: 'Enter domestic area in sqft',
-        // },
         {
           key: 'area_com_sqft',
           label: 'Area (sqft)',
           required: true,
           placeholder: 'Enter commercial area in sqft',
         },
-        {
-          key: 'direction',
-          label: 'Direction',
-          required: true,
-          placeholder: 'Enter direction',
-        },
+        // {
+        //   key: 'direction',
+        //   label: 'Direction',
+        //   required: true,
+        //   placeholder: 'Enter direction',
+        // },
         {
           key: 'latitude',
           label: 'Latitude',
@@ -630,14 +638,15 @@ export default function Survey() {
     const fetchDistricts = async () => {
       try {
         const districtList = await getAllDistrictList();
-        setDistrict(districtList?.data || []);
+        // Format district data immediately after fetching
+        setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
       } catch (err) {
         const error = err as any;
         if (error.status === 401) {
           setUsers(null);
           setIsAuthenticated(false);
           await AsyncStorage.removeItem('user');
-          router.replace('/(auth)/login'); // 👈 handle it here
+          router.replace('/(auth)/login');
         } else {
           console.error('Error fetching districts:', error.message);
         }
@@ -647,23 +656,11 @@ export default function Survey() {
   }, []);
 
   const handleAlertConfirm = () => {
-    // Hide the alert
     setAlertInfo({ ...alertInfo, visible: false });
-
-    // If the alert was a success, reset the form
-    if (alertInfo.type === 'success') {
-      // setSurveyData({ user_id: user ? String(user.UserID) : '' });
-      // Ensure citizenship is set to 'Indian' after success
-      setSurveyData((prev) => ({
-        user_id: user ? String(user.UserID) : '',
-        citizenship: 'Indian',
-      }));
+    if (alertInfo.type === 'success' && alertInfo.context === 'survey_submission') {
+      setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian' });
       setCurrentStep(0);
     }
-    // if (alertInfo.type === 'success' || alertInfo.type === 'error') {
-    //   setSurveyData({ user_id: user ? String(user.UserID) : '' });
-    //   setCurrentStep(0);
-    // }r
   };
 
   const updateField = (key: string, value: any) => {
@@ -687,6 +684,7 @@ export default function Survey() {
   };
 
   const handleStallImagePick = async (fieldKey: string) => {
+    isCameraOpenRef.current = true;
     Alert.alert(
       '📸 Select Image Source',
       'How would you like to add or change the image?',
@@ -694,10 +692,8 @@ export default function Survey() {
         {
           text: '📷 Camera',
           onPress: async () => {
-            isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
-              setLoadImage(true);
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ['images'],
                 allowsEditing: false,
@@ -715,12 +711,8 @@ export default function Survey() {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
                   if (status !== 'granted') {
-                    Dialog.show({
-                      type: ALERT_TYPE.WARNING,
-                      title: '❌ Permission denied!',
-                      textBody: 'Location permission is required.',
-                      button: 'OK',
-                    });
+                    // setAlertInfo({ visible: true, type: 'error', message: 'Location permission is required.'});
+                    setAlertInfo({ visible: true, type:'Permission Denied', message: 'Location permission is required.'});
                     return;
                   }
                   const loc = await Location.getCurrentPositionAsync({});
@@ -728,11 +720,7 @@ export default function Survey() {
                   longitude = loc.coords.longitude;
                 }
 
-                // Call the compressImageUri function to compress the image before updating the field
                 const compressedUri = await compressImageUri(asset.uri);
-
-                console.log(compressedUri);
-
                 updateField(fieldKey, { uri: compressedUri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
@@ -741,7 +729,6 @@ export default function Survey() {
               console.error('Camera pick failed:', err);
             } finally {
               setLoadingImage(null);
-              setLoadImage(false);
               isCameraOpenRef.current = false;
             }
           },
@@ -752,7 +739,6 @@ export default function Survey() {
             isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
-              setLoadImage(true);
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
                 allowsEditing: false,
@@ -770,12 +756,7 @@ export default function Survey() {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
                   if (status !== 'granted') {
-                    Dialog.show({
-                      type: ALERT_TYPE.WARNING,
-                      title: '❌ Permission denied!',
-                      textBody: 'Location permission is required.',
-                      button: 'OK',
-                    });
+                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.'});
                     return;
                   }
                   const loc = await Location.getCurrentPositionAsync({});
@@ -795,12 +776,11 @@ export default function Survey() {
               console.error('Gallery pick failed:', err);
             } finally {
               setLoadingImage(null);
-              setLoadImage(false);
               isCameraOpenRef.current = false;
             }
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => {isCameraOpenRef.current = false;} },
       ]
     );
   };
@@ -816,7 +796,6 @@ export default function Survey() {
             isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
-              setLoadImage(true);
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ['images'],
                 allowsEditing: false,
@@ -825,23 +804,13 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-
-
                 const compressedUri = await compressImageUri( result.assets[0].uri);
-
-                console.log(compressedUri);
-
                 updateField(fieldKey, { uri: compressedUri });
-
-                // updateField(fieldKey, {
-                //   uri: result.assets[0].uri,
-                // });
               }
             } catch (err) {
               console.error('Camera pick failed:', err);
             } finally {
               setLoadingImage(null);
-              setLoadImage(false);
               isCameraOpenRef.current = false;
             }
           },
@@ -849,10 +818,9 @@ export default function Survey() {
         {
           text: '🖼️ Device Gallery',
           onPress: async () => {
-            isCameraOpenRef.current = false;
+            isCameraOpenRef.current = true;
             try {
               setLoadingImage(fieldKey);
-              setLoadImage(true);
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
                 allowsEditing: false,
@@ -861,30 +829,18 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-
-
                 const compressedUri = await compressImageUri( result.assets[0].uri);
-
-                console.log(compressedUri);
-
                 updateField(fieldKey, { uri: compressedUri });
-
-
-
-                // updateField(fieldKey, {
-                //   uri: result.assets[0].uri,
-                // });
               }
             } catch (err) {
               console.error('Gallery pick failed:', err);
             } finally {
               setLoadingImage(null);
-              setLoadImage(false);
               isCameraOpenRef.current = false;
             }
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => {isCameraOpenRef.current = false;} },
       ]
     );
   };
@@ -904,6 +860,10 @@ export default function Survey() {
         continue;
       if (field.key === 'stall_no' && surveyData.licenseType !== '2') continue;
 
+      if (currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === 'property_tax_payment_to_year')) {
+          continue;
+      }
+
       if (!field.required) continue;
       if (field.showFor && !field.showFor.includes(currentStatusString))
         continue;
@@ -922,19 +882,18 @@ export default function Survey() {
       ) {
         setAlertInfo({
             visible: true,
-            type: 'error',
+            type: 'Missing Information',
             message: `${field.label} is required`,
         });
         return false;
       }
       
-      // PAN validation logic
       if (field.key === 'pan') {
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(fieldValue)) {
             setAlertInfo({
                 visible: true,
-                type: 'error',
+                type: 'Invalid',
                 message: 'Invalid PAN format. Please use the format ABCDE1234F.',
             });
             return false;
@@ -946,15 +905,12 @@ export default function Survey() {
         if (!phoneRegex.test(fieldValue)) {
             setAlertInfo({
                 visible: true,
-                type: 'error',
+                type: 'Invalid',
                 message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number.',
             });
             return false;
         }
       }
-
-
-
     }
     return true;
   };
@@ -967,7 +923,6 @@ export default function Survey() {
     'occupy_from_year',
     'stall_no',
     'holding_no',
-    'jl_no',
     'khatian_no',
     'plot_no',
     'area_com_sqft',
@@ -975,15 +930,32 @@ export default function Survey() {
     'longitude',
     'land_valuation_amount',
   ];
+
   const formatDropdownData = (
     data: any[],
     keyField: string,
     valueField: string
   ) =>
-    (data || []).map((item) => ({
-      key: String(item[keyField]),
-      value: String(item[valueField]),
-    }));
+    (data || []).map((item) => {
+      let displayValue = '';
+      if (item && item[valueField] !== null && item[valueField] !== undefined) {
+        if (typeof item[valueField] === 'object' && !Array.isArray(item[valueField])) {
+          try {
+            displayValue = JSON.stringify(item[valueField]);
+            console.warn(`Object found for SelectList item value for keyField: ${keyField}, valueField: ${valueField}, problematic value: ${JSON.stringify(item[valueField])}. Stringifying it.`);
+          } catch (e) {
+            displayValue = '[Invalid Object]'; 
+            console.error(`Error stringifying object for SelectList item value for keyField: ${keyField}, valueField: ${valueField}`, item[valueField], e);
+          }
+        } else {
+          displayValue = String(item[valueField]);
+        }
+      }
+      return {
+        key: String(item[keyField]),
+        value: displayValue,
+      };
+    });
 
   const nextStep = async () => {
     if (validateStep()) {
@@ -999,45 +971,34 @@ export default function Survey() {
               : 'Survey submission failed. Please try again.';
 
           if (response.status === 0) {
-           
-
             setAlertInfo({
               visible: true,
               type:  'success' ,
               message: messages,
+              context: 'survey_submission',
             });
-
             setNeedsRefresh(true);
-           
+            setMobileAutofillSuccessful(false);
           } else {
-            
-
             setAlertInfo({
               visible: true,
-              type: 'error',
+              type: 'Something went Wrong',
               message: messages,
             });
-
-           
           }
         } catch (err) {
-          // console.error('Submission Error:', error);
           const error = err as any;
           if (error.status === 401) {
             setUsers(null);
             setIsAuthenticated(false);
             await AsyncStorage.removeItem('user');
-            router.replace('/(auth)/login'); // 👈 handle it here
+            router.replace('/(auth)/login');
           } else {
-           
-           
-
             setAlertInfo({
               visible: true,
-              type: 'error',
+              type: 'Survey Failure',
               message: 'Failed to save survey. Please try again.',
             });
-
             console.error('Submission Error:', error.message);
           }
         } finally {
@@ -1065,32 +1026,44 @@ export default function Survey() {
       });
       setSurveyData(newData);
       setCurrentStep(currentStep - 1);
+      setMobileAutofillSuccessful(false);
     }
   };
 
   const handleDistrictChange = async (selectedKey: any) => {
-    updateField('district_id', selectedKey);
-    updateField('police_station_id', '');
-    updateField('mouza_id', '');
-    updateField('hat_id', '');
+    const districtId = String(selectedKey);
+    updateField('district_id', districtId);
+    
+    // Clear all dependent fields in surveyData to empty string
+    updateField('police_station_id', ''); 
+    updateField('mouza_id', ''); 
+    updateField('hat_id', ''); 
+    updateField('adsr_name', ''); 
+    updateField('jl_no', ''); 
+
+    // Clear options for dependent dropdowns
     setPoliceStationOptions([]);
     setMouzaOptions([]);
     setHaatAllDetailsOptions([]);
+    setAdsrOptions([]); 
+    setJlNOOptions([]); // Clear JL No options here too
+
+    if (!districtId) return; 
+
     try {
       const [policeStations, haatDetails] = await Promise.all([
-        getPoliceStationsByDistrictId(selectedKey),
-        getAllHaatDetailsByDistrictID(selectedKey),
+        getPoliceStationsByDistrictId(districtId),
+        getAllHaatDetailsByDistrictID(districtId),
       ]);
-      setHaatAllDetailsOptions(haatDetails?.data || []);
-      setPoliceStationOptions(policeStations?.data || []);
+      setHaatAllDetailsOptions(formatDropdownData(haatDetails?.data || [], 'haat_id', 'haat_name'));
+      setPoliceStationOptions(formatDropdownData(policeStations?.data || [], 'thana_id', 'thana_name'));
     } catch (err) {
-    
       const error = err as any;
       if (error.status === 401) {
         setUsers(null);
         setIsAuthenticated(false);
         await AsyncStorage.removeItem('user');
-        router.replace('/(auth)/login'); // 👈 handle it here
+        router.replace('/(auth)/login');
       } else {
         console.error('Error fetching dependent district data:', error.message);
       }
@@ -1098,22 +1071,57 @@ export default function Survey() {
   };
 
   const handlePoliceStationChange = async (selectedKey: any) => {
-    updateField('police_station_id', selectedKey);
-    updateField('mouza_id', '');
+    const thanaId = String(selectedKey);
+    updateField('police_station_id', thanaId);
+
+    // Clear all dependent fields in surveyData to empty string
+    updateField('mouza_id', ''); 
+    updateField('adsr_name', ''); 
+    updateField('jl_no', ''); 
+
+    // Clear options for dependent dropdowns
     setMouzaOptions([]);
+    setAdsrOptions([]); 
+    setJlNOOptions([]); // Clear JL No options here too
+
+    if (!thanaId) return; 
+
     try {
-      const mouzaList = await getMouzaListByThanaID(selectedKey);
-      setMouzaOptions(mouzaList?.data || []);
-    } catch (err) {
+      const [mouzaList, adsrList, jlNoData] = await Promise.all([
+        getMouzaListByThanaID(thanaId),
+        getAdsrByThanaId(thanaId),
+        getJlNoByThanaId(thanaId)
+      ]);
+
+      console.log("Raw ADSR List from API for thana ID", thanaId, ":", adsrList?.data); 
+      console.log("Raw JL No Data from API for thana ID", thanaId, ":", jlNoData?.data); // Log JL No data
       
+      setMouzaOptions(formatDropdownData(mouzaList?.data || [], 'mouza_id', 'mouza_name'));
+      
+      const formattedAdsrData = formatDropdownData(adsrList?.data || [], 'adsr_name', 'adsr_name');
+      console.log("Formatted ADSR data for SelectList:", formattedAdsrData);
+      setAdsrOptions(formattedAdsrData); 
+
+      // Format JL No data and set its options
+      const formattedJlNOData = formatDropdownData(jlNoData?.data || [], 'jl_no', 'jl_no');
+      console.log("Formatted JL No data for SelectList:", formattedJlNOData);
+      setJlNOOptions(formattedJlNOData);
+
+      // If you want to pre-select the first JL No if available:
+      if (formattedJlNOData.length > 0 && !surveyData.jl_no) { // Only pre-select if not already set
+        updateField('jl_no', formattedJlNOData[0].key);
+      }
+
+
+    } catch (err) {
       const error = err as any;
       if (error.status === 401) {
         setUsers(null);
         setIsAuthenticated(false);
         await AsyncStorage.removeItem('user');
-        router.replace('/(auth)/login'); // 👈 handle it here
+        router.replace('/(auth)/login');
       } else {
-        console.error('Error fetching mouza data:', error.message);
+        console.error('Error fetching mouza, ADSR, or JL No data:', error.message);
       }
     }
   };
@@ -1123,7 +1131,6 @@ export default function Survey() {
       '1': 'new',
       '2': 'existing',
       '3': 'transfer',
-      
     };
     const currentStatusString =
       statusMap[surveyData.applicationStatus as string];
@@ -1155,29 +1162,59 @@ export default function Survey() {
       applicationFor,
       usesType,
       documentTypes,
+      transfer_relationship: transferRelationshipOptions,
     };
 
-    if (dropdownDataMap[field.key] || field.type === 'dropdown') {
-      const data =
-        field.type === 'dropdown' ? yesNoOptions : dropdownDataMap[field.key];
+    let selectedValueForSelectList = '';
+    if (value !== null && value !== undefined) {
+        if (field.type === 'dropdown') {
+            selectedValueForSelectList = value === true ? 'true' : value === false ? 'false' : String(value);
+        } else {
+            selectedValueForSelectList = String(value);
+        }
+    }
+
+    // Determine the dynamic key for SelectList components to force remount
+    let selectListKey = field.key; // Default key
+    if (field.key === 'police_station_id') {
+        selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
+    } else if (['mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key)) {
+        selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
+    }
+
+
+    // Render standard dropdowns (not dynamically fetched based on other fields)
+    // This condition checks if the field is in dropdownDataMap AND is NOT one of the dependent dropdowns
+    if (dropdownDataMap[field.key] || (field.type === 'dropdown' && !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key))) {
+      const data = dropdownDataMap[field.key] || yesNoOptions; // Use dropdownDataMap first, fallback to yesNoOptions if field.type is 'dropdown'
+      const saveType = 'key';
+
+      // console.log(`Rendering SelectList for ${field.key}. Data:`, data, `Selected: ${selectedValueForSelectList}`);
+
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
             {field.label}{' '}
-            {field.required && <Text style={styles.required}>*</Text>}
+            {field.required && !(currentStatusString === 'transfer' && ['previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year'].includes(field.key)) && <Text style={styles.required}>*</Text>}
           </Text>
           <View style={styles.inputContainer}>
             <SelectList
-              setSelected={(val: any) =>
+              key={selectListKey} // Apply dynamic key
+              setSelected={(val: any) => {
+                let valueToStore = val;
+                if (typeof val === 'object' && val !== null && 'key' in val) {
+                  valueToStore = val.key;
+                }
                 updateField(
                   field.key,
-                  val === 'true' ? true : val === 'false' ? false : val
-                )
-              }
+                  valueToStore === 'true' ? true : valueToStore === 'false' ? false : String(valueToStore)
+                );
+              }}
               placeholder={field.placeholder}
               data={data}
-              save="key"
+              save={saveType}
               search={false}
+              selected={selectedValueForSelectList}
               boxStyles={{
                 borderWidth: 0,
                 elevation: 0,
@@ -1205,32 +1242,46 @@ export default function Survey() {
       );
     }
 
+    // Render dependent dropdowns (District, Police Station, Mouza, Hat, ADSR, JL No)
     if (
-      ['district_id', 'police_station_id', 'mouza_id', 'hat_id'].includes(
+      ['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(
         field.key
       )
     ) {
-      let data: any[] = [],
-        handler = (val: any) => updateField(field.key, val);
+      let data: any[] = [];
+      let currentFieldHandler = (val: any) => {
+        let valueToStore = val;
+        if (typeof val === 'object' && val !== null && 'key' in val) {
+          valueToStore = val.key;
+        }
+
+        if (field.key === 'district_id') {
+          handleDistrictChange(String(valueToStore));
+        } else if (field.key === 'police_station_id') {
+          handlePoliceStationChange(String(valueToStore));
+        } else {
+          updateField(field.key, String(valueToStore));
+        }
+      };
+
       if (field.key === 'district_id') {
-        data = formatDropdownData(district, 'district_id', 'district_name');
-        handler = handleDistrictChange;
+        data = district;
       } else if (field.key === 'police_station_id') {
-        data = formatDropdownData(
-          policeStationOptions,
-          'thana_id',
-          'thana_name'
-        );
-        handler = handlePoliceStationChange;
+        data = policeStationOptions;
       } else if (field.key === 'mouza_id') {
-        data = formatDropdownData(mouzaOptions, 'mouza_id', 'mouza_name');
+        data = mouzaOptions;
       } else if (field.key === 'hat_id') {
-        data = formatDropdownData(
-          haatAllDetailsOptions,
-          'haat_id',
-          'haat_name'
-        );
+        data = haatAllDetailsOptions;
+      } 
+      else if (field.key === 'adsr_name') {
+        data = adsrOptions;
       }
+      else if (field.key === 'jl_no') { 
+        data = jlNOOptions; // Use the formatted JL No options
+      }
+     
+      // console.log(`Rendering dynamic SelectList for ${field.key}. Data:`, data, `Selected: ${selectedValueForSelectList}`);
+
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
@@ -1239,11 +1290,13 @@ export default function Survey() {
           </Text>
           <View style={styles.inputContainer}>
             <SelectList
-              setSelected={handler}
+              key={selectListKey} // Apply dynamic key for all dependent dropdowns
+              setSelected={currentFieldHandler}
               placeholder={field.placeholder}
               data={data}
               save="key"
               search={true}
+              selected={selectedValueForSelectList}
               boxStyles={{
                 borderWidth: 0,
                 elevation: 0,
@@ -1272,7 +1325,6 @@ export default function Survey() {
     }
 
     if (field.type === 'image') {
-      // const imageValue = value as ImageFieldType;
       const imageValue =
         typeof value === 'object' && value !== null && 'uri' in value
           ? (value as ImageFieldType)
@@ -1313,7 +1365,6 @@ export default function Survey() {
     }
 
     if (field.type === 'images') {
-      // const imageValue = value as ImageFieldType;
       const imageValue =
         typeof value === 'object' && value !== null && 'uri' in value
           ? (value as ImageFieldType)
@@ -1358,7 +1409,7 @@ export default function Survey() {
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
             {field.label}{' '}
-            {field.required && <Text style={styles.required}>*</Text>}
+            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date' ) && <Text style={styles.required}>*</Text>}
           </Text>
           <TouchableOpacity
             style={styles.datePickerButton}
@@ -1386,22 +1437,31 @@ export default function Survey() {
       );
     }
 
+    const isEditable = field.key !== 'user_id' && field.key !== 'citizenship';
+                      //  !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date'));
+
+    const isAutoFilledField = ['name', 'guardian_name', 'address', 'pin_code', 'pan'].includes(field.key);
+    // NEW: Use mobileAutofillSuccessful to determine if the field should be disabled by autofill
+    const isDisabledByAutoFill = isAutoFilledField && mobileAutofillSuccessful;
+
+
     return (
       <View key={field.key} style={styles.fieldContainer}>
         <Text style={styles.fieldLabel}>
           {field.label}{' '}
-          {field.required && <Text style={styles.required}>*</Text>}
+          {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}
+          
         </Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={[
               styles.textInput,
-              field.multiline && styles.textInputMultiline,
-              field.key === 'citizenship' && { opacity: 0.85 },
+              (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline,
+              (!isEditable || isDisabledByAutoFill) && {backgroundColor: '#F3F4F6'}
             ]}
             value={(value as string) || ''}
             placeholder={field.placeholder}
-            editable={field.key !== 'user_id' && field.key !== 'citizenship'}
+            editable={isEditable && !isDisabledByAutoFill} // This is the crucial line for enabling/disabling
             placeholderTextColor="#9CA3AF"
             keyboardType={
               numericFields.includes(field.key) ? 'numeric' : 'default'
@@ -1434,9 +1494,69 @@ export default function Survey() {
                 : undefined
             }
             autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
-            multiline={field.multiline}
-            numberOfLines={field.multiline ? 4 : 1}
-            onChangeText={(text) => updateField(field.key, text)}
+            multiline={field.multiline || field.key === 'land_transfer_explanation'}
+            numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
+            onChangeText={(text) => {
+                updateField(field.key, text);
+                // Trigger API call when 10 digits are entered for mobile
+                if (field.key === 'mobile' && text.length === 10) {
+                    getUserDetailsByPhoneNumber(text)
+                        .then(response => {
+                            if (response.data) {
+                                setMobileAutofillSuccessful(true); // Autofill successful
+                                // Update fields only if they are currently empty or not explicitly set by the user
+                                if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
+                                if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
+                                if (!surveyData.address) updateField('address', response.data.address || '');
+                                if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
+                                if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
+                                setAlertInfo({
+                                    visible: true,
+                                    type: 'Autofill Successful',
+                                    message: 'User details autofilled!',
+                                    context: 'autofill_success',
+                                });
+                            } else {
+                                setMobileAutofillSuccessful(false); // No data found, allow manual edit
+                                // If no data found, explicitly clear fields so they become editable
+                                updateField('name', '');
+                                updateField('guardian_name', '');
+                                updateField('address', '');
+                                updateField('pin_code', '');
+                                updateField('pan', '');
+                                setAlertInfo({
+                                    visible: true,
+                                    type: 'User Not Found',
+                                    message: 'No existing user found. Please fill details manually.',
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error fetching user details:', error);
+                            setMobileAutofillSuccessful(false); // API call failed, allow manual edit
+                            // If API call fails, explicitly clear fields so they become editable
+                            updateField('name', '');
+                            updateField('guardian_name', '');
+                            updateField('address', '');
+                            updateField('pin_code', '');
+                            updateField('pan', '');
+                            setAlertInfo({
+                                visible: true,
+                                type: 'User Details Unavailable',
+                                message: 'Error fetching user details. Please fill manually.',
+                            });
+                        });
+                } else if (field.key === 'mobile' && text.length < 10) {
+                    // If mobile number is incomplete or cleared by user, allow manual editing
+                    setMobileAutofillSuccessful(false); // Reset the flag
+                    // Optionally clear related autofilled fields immediately as mobile is no longer complete
+                    updateField('name', '');
+                    updateField('guardian_name', '');
+                    updateField('address', '');
+                    updateField('pin_code', '');
+                    updateField('pan', '');
+                }
+            }}
           />
         </View>
       </View>
@@ -1502,10 +1622,8 @@ export default function Survey() {
      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
+        keyboardVerticalOffset={15}
       >
-
-
-
       <LinearGradient
         colors={[currentStepData.color, currentStepData.color + '90']}
         style={styles.header}
@@ -1554,6 +1672,7 @@ export default function Survey() {
         <ScrollView
           ref={scrollViewRef}
           style={styles.formContainer}
+          contentContainerStyle={{ paddingBottom: 20 }}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContent}>
@@ -1564,9 +1683,23 @@ export default function Survey() {
 
       <View style={styles.buttonContainer}>
         {currentStep > 0 && (
-          <TouchableOpacity style={styles.prevButton} onPress={prevStep}>
-            <ChevronLeft size={20} color="#6B7280" />
-            <Text style={styles.prevButtonText}>Previous</Text>
+          <TouchableOpacity
+            style={[
+              styles.prevButton,
+              (isSaving || !!loadingImage) && { backgroundColor: '#D1D5DB' } // Tailwind gray-300
+            ]}
+            onPress={prevStep}
+            disabled={isSaving || !!loadingImage}
+          >
+            <ChevronLeft size={20} color={(isSaving || !!loadingImage) ? "#9CA3AF" : "#6B7280"} />
+            <Text
+              style={[
+                styles.prevButtonText,
+                (isSaving || !!loadingImage) && { color: '#9CA3AF' }
+              ]}
+            >
+              Previous
+            </Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -1575,11 +1708,11 @@ export default function Survey() {
             currentStep === 0 && styles.nextButtonFull,
           ]}
           onPress={nextStep}
-          disabled={isSaving || loadImage}
+          disabled={isSaving || !!loadingImage}
         >
           <LinearGradient
             colors={
-              (isSaving || loadImage)
+              (isSaving || loadingImage)
                 ? ['#9CA3AF', '#6B7280']
                 : [currentStepData.color, currentStepData.color + 'CC']
             }
@@ -1588,6 +1721,8 @@ export default function Survey() {
             <Text style={styles.nextButtonText}>
               {isSaving
                 ? 'Saving...'
+                : loadingImage
+                ? 'Processing...'
                 : currentStep === steps.length - 1
                 ? 'Submit Survey'
                 : 'Continue'}
@@ -1607,6 +1742,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    marginBottom: -40,
   },
   header: {
     paddingHorizontal: 20,
@@ -1707,7 +1843,7 @@ const styles = StyleSheet.create({
   stepCircle: {
     width: 24,
     height: 24,
-    borderRadius: 14,
+    borderRadius: 12,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1730,10 +1866,11 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
     paddingTop: 20,
+    
   },
   formContent: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    // Removed paddingBottom here as KeyboardAvoidingView handles it
   },
   fieldContainer: {
     marginBottom: 20,
@@ -1778,10 +1915,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#374151',
-    textAlignVertical: 'top',
   },
   textInputMultiline: {
     minHeight: 100,
+    textAlignVertical: 'top',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -1790,6 +1927,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
+    marginBottom: 10,
   },
   dialogbox: {
     justifyContent: 'center',
@@ -1816,6 +1954,8 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
+    
+
   },
   nextButtonFull: {
     marginLeft: 0,
@@ -1847,10 +1987,7 @@ const styles = StyleSheet.create({
     borderColor: '#0EA5E9',
   },
   imagePlaceholder: {
-    borderColor: '#E5E7EB',
-  },
-  imagePlaceholderText: {
-    color: '#94A3B8',
+    borderColor: '#94A3B8',
     fontSize: 16,
     textAlign: 'center',
   },
