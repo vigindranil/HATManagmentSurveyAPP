@@ -55,6 +55,15 @@ export default function Settings() {
     onCancel: undefined,
   });
 
+  // --- Helper for forced logout when user missing ---
+  const handleForceLogout = async () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    await AsyncStorage.removeItem('user');
+    setAlertInfo((prev) => ({ ...prev, visible: false }));
+    router.replace('/(auth)/login');
+  };
+
   /**
    * Custom alert confirm handler that calls the onConfirm handler from alertInfo and closes the alert.
    */
@@ -85,19 +94,37 @@ export default function Settings() {
     const fetchUser = async () => {
       try {
         const user1 = await AsyncStorage.getItem('user');
-        // console.log(user1);
         if (user1) {
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
           if (parsedUser2){
             setUserState(parsedUser2);
+            return;
           }
         }
+        // If we reach here, user not found
+        setAlertInfo({
+          visible: true,
+          type: 'error',
+          message: 'Your session has expired or user not found. Logging out...',
+          onConfirm: handleForceLogout,
+          onCancel: handleForceLogout,
+        });
       } catch (error) {
+        // If error fetching user, also force logout
+        setAlertInfo({
+          visible: true,
+          type: 'error',
+          message: 'There was an error verifying your session. Logging out...',
+          onConfirm: handleForceLogout,
+          onCancel: handleForceLogout,
+        });
         console.error('Error Users data', error);
       }
     };
     fetchUser();
+    // We want to run only once at mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClearData = () => {

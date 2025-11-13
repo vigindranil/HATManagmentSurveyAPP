@@ -49,6 +49,14 @@ export default function CustomAlert({ type = "success", message, onConfirm,onCan
         title: "Permission Denied",
       };
       break;
+    case "Unauthorized":
+      colors = {
+        bg: "#DC2626", // Red
+        badge: "#F87171", // Light Red
+        emoji: "🔒",
+        title: "Unauthorized",
+      };
+      break;
     case "Autofill Successful":
       colors = {
         bg: "#34D399", // Green

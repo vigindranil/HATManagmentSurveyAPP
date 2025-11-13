@@ -2,24 +2,22 @@ import { getAuthToken } from './context/tokenManager';
 import formatDateToDDMMYYYY from './utils/format';
 import Constants from 'expo-constants';
 
-
-console.log("constants", Constants?.expoConfig?.extra?.API_URL_AUTH);
-console.log("constants", Constants?.expoConfig?.extra?.BASE_URL);
-
+console.log('constants', Constants?.expoConfig?.extra?.API_URL_AUTH);
+console.log('constants', Constants?.expoConfig?.extra?.BASE_URL);
 
 // login
 
 export async function authentication(username: string, password: string) {
   // const url = `http://115.187.62.16:9999/HMSRestAPI/api/auth/authentication`;
-  const url = process.env.EXPO_PUBLIC_API_URL_AUTH ? `${process.env.EXPO_PUBLIC_API_URL_AUTH}` : Constants?.expoConfig?.extra?.API_URL_AUTH;
+  const url = process.env.EXPO_PUBLIC_API_URL_AUTH
+    ? `${process.env.EXPO_PUBLIC_API_URL_AUTH}`
+    : Constants?.expoConfig?.extra?.API_URL_AUTH;
 
-  console.log("🔍 API URL AUTH:", process.env.EXPO_PUBLIC_API_URL_AUTH);
-  
+  console.log('🔍 API URL AUTH:', process.env.EXPO_PUBLIC_API_URL_AUTH);
 
   try {
     const myHeaders = new Headers();
     myHeaders.append('Content-Type', 'application/json');
-   
 
     const raw = JSON.stringify({
       username: username,
@@ -45,7 +43,7 @@ export async function authentication(username: string, password: string) {
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -58,28 +56,26 @@ export async function authentication(username: string, password: string) {
 }
 
 export async function getAllDistrictList() {
-
   // const url =  'http://115.187.62.16:9999/HMSRestAPI/api/user/getAllDistrictList'
-   const url =  process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllDistrictList` : Constants?.expoConfig?.extra?.BASE_URL+"/getAllDistrictList";
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllDistrictList`
+    : Constants?.expoConfig?.extra?.BASE_URL + '/getAllDistrictList';
   try {
     const yourTokenVariable = getAuthToken();
-    const response = await fetch(
-     url,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -93,30 +89,27 @@ export async function getAllDistrictList() {
 export async function getPoliceStationsByDistrictId(
   districtId: string | number
 ) {
-
-   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getThanaListByDistrictID?DistrictID=${districtId}` : Constants?.expoConfig?.extra?.BASE_URL+`/getThanaListByDistrictID?DistrictID=${districtId}`;
-
-
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getThanaListByDistrictID?DistrictID=${districtId}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getThanaListByDistrictID?DistrictID=${districtId}`;
 
   try {
     const yourTokenVariable = getAuthToken();
-    const response = await fetch(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -129,33 +122,29 @@ export async function getPoliceStationsByDistrictId(
 }
 
 export async function getMouzaListByThanaID(ThanaID: string | number) {
-
-   
-
-   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getMouzaListByThanaID?ThanaID=${ThanaID}`;
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getMouzaListByThanaID?ThanaID=${ThanaID}`;
   try {
     const yourTokenVariable = getAuthToken();
-    const response = await fetch(
-     url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
-
 
     return data;
   } catch (error) {
@@ -164,111 +153,96 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
   }
 }
 
-
-
-
 export async function getAdsrByThanaId(ThanaID: string | number) {
-  
-
-  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getADSRName?ThanaID=${ThanaID}`;
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?ThanaID=${ThanaID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getADSRName?ThanaID=${ThanaID}`;
 
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getADSRName?ThanaID=${ThanaID}`
- try {
-  console.log("adsrurl",url);
-   const yourTokenVariable = getAuthToken();
-   const response = await fetch(
-    url,
-     {
-       method: 'POST',
-       headers: {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${yourTokenVariable}`,
-       },
-     }
-   );
-
-   if (response.status === 401) {
-     throw { status: 401, message: 'Unauthorized: Please login again.' };
-   }
-
-   if (!response.ok) {
-     throw { status: response.status, message: "API Error" };
-   }
-
-   const data = await response.json();
-
-   
-
-   return data;
- } catch (error) {
-   console.log('Error adsr  list:', error.message);
-   throw error;
- }
-}
-
-
-
-    export async function getJlNoByThanaId(ThanaID: string | number) {
-      
-
-      const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?ThanaID=${ThanaID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getJLNO?ThanaID=${ThanaID}`;
-      // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getJLNO?ThanaID=${ThanaID}`
-    try {
-      const yourTokenVariable = getAuthToken();
-      const response = await fetch(
-        url,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${yourTokenVariable}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        throw { status: 401, message: 'Unauthorized: Please login again.' };
-      }
-
-      if (!response.ok) {
-        throw { status: response.status, message: "API Error" };
-      }
-
-      const data = await response.json();
-
-      
-
-
-      return data;
-    } catch (error) {
-      console.log('Error jlno list:', error.message);
-      throw error;
-    }
-    }
-
-export async function getAllHaatDetailsByDistrictID(
-  DistrictID: string | number
-) {
-   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
   try {
+    console.log('adsrurl', url);
     const yourTokenVariable = getAuthToken();
-    const response = await fetch(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
+    }
+
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    console.log('Error adsr  list:', error.message);
+    throw error;
+  }
+}
+
+export async function getJlNoByThanaId(ThanaID: string | number) {
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?ThanaID=${ThanaID}`
+    : Constants?.expoConfig?.extra?.BASE_URL + `/getJLNO?ThanaID=${ThanaID}`;
+  // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getJLNO?ThanaID=${ThanaID}`
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
+
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
+
+    if (!response.ok) {
+      throw { status: response.status, message: 'API Error' };
+    }
+
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    console.log('Error jlno list:', error.message);
+    throw error;
+  }
+}
+
+export async function getAllHaatDetailsByDistrictID(
+  DistrictID: string | number
+) {
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`;
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
+
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
+
+    if (!response.ok) {
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -279,82 +253,85 @@ export async function getAllHaatDetailsByDistrictID(
   }
 }
 
-
 export async function saveSurveyOnline(surveyData: any) {
-
-  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/saveSurveyDetails` : Constants?.expoConfig?.extra?.BASE_URL+`/saveSurveyDetails`
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/saveSurveyDetails`
+    : Constants?.expoConfig?.extra?.BASE_URL + `/saveSurveyDetails`;
   // const url =`http://192.168.0.235:9991/api/user/saveSurveyDetails`
 
   console.log(url);
 
-
   try {
-
     const yourTokenVariable = getAuthToken();
     const myHeaders = new Headers();
 
     myHeaders.append('Authorization', `Bearer ${yourTokenVariable}`);
     // Do not set Content-Type header when sending FormData; let the browser set it automatically.
 
-    console.log("surveyData", surveyData);
+    console.log('surveyData', surveyData);
 
     const formData = new FormData();
 
-    formData.append("applicationDetials", JSON.stringify( {
-      survey_id: 0,
-      license_type: parseInt(surveyData?.licenseType) || 0,
-      application_status: parseInt(surveyData?.applicationStatus) || 0,
-      applicant_type: parseInt(surveyData?.applicationFor) || 0,
-      usage_type: parseInt(surveyData?.usesType) || 0,
-      name: surveyData?.name || "",
-      guardian_name: surveyData?.guardian_name || "",
-      address: surveyData?.address || "",
-      mobile: surveyData?.mobile || "",
-      citizenship: surveyData?.citizenship || "",
-      pin_code: parseInt(surveyData?.pin_code) || 0,
-      is_within_family: surveyData?.is_within_family || false,
-      transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
-      document_type: surveyData?.documentTypes || "",
-      pan: surveyData?.pan || "",
-      previous_license_no: surveyData?.previous_license_no || "",
-      license_expiry_date: formatDateToDDMMYYYY(surveyData?.license_expiry_date) || "",
-      property_tax_payment_to_year: parseInt(surveyData?.property_tax_payment_to_year) || 0,
-      land_transfer_explanation: surveyData?.land_transfer_explanation || "",
-      occupy: surveyData?.occupy || false,
-      occupy_from_year: parseInt(surveyData?.occupy_from_year) || 0,
-      present_occupier_name: surveyData?.present_occupier_name || "",
-      occupier_guardian_name: surveyData?.occupier_guardian_name || "",
-      adsr_name: surveyData?.adsr_name || "",
-      is_same_owner: surveyData?.is_same_owner || false,
-      rented_to_whom: surveyData?.rented_to_whom || "",
-      district_id: parseInt(surveyData?.district_id) || 0,
-      police_station_id: parseInt(surveyData?.police_station_id) || 0,
-      hat_id: parseInt(surveyData?.hat_id) || 0,
-      mouza_id: surveyData?.mouza_id || "",
-      stall_no: surveyData?.stall_no || "",
-      holding_no: surveyData?.holding_no || "",
-      jl_no: surveyData?.jl_no || "",
-      khatian_no: surveyData?.khatian_no || "",
-      plot_no: surveyData?.plot_no || "",
-      // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
-      area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
-      // direction: surveyData?.direction || "", direction commented out
-      latitude: parseFloat(surveyData?.latitude) || 0.0,
-      longitude: parseFloat(surveyData?.longitude) || 0.0,
-      land_valuation_amount : parseFloat(surveyData?.land_valuation_amount) || 0.0,
-      user_id: parseInt(surveyData?.user_id) || 0,
-      remarks : surveyData.remarks || "",
-    }));
+    formData.append(
+      'applicationDetials',
+      JSON.stringify({
+        survey_id: 0,
+        license_type: parseInt(surveyData?.licenseType) || 0,
+        application_status: parseInt(surveyData?.applicationStatus) || 0,
+        applicant_type: parseInt(surveyData?.applicationFor) || 0,
+        usage_type: parseInt(surveyData?.usesType) || 0,
+        name: surveyData?.name || '',
+        guardian_name: surveyData?.guardian_name || '',
+        address: surveyData?.address || '',
+        mobile: surveyData?.mobile || '',
+        citizenship: surveyData?.citizenship || '',
+        pin_code: parseInt(surveyData?.pin_code) || 0,
+        is_within_family: surveyData?.is_within_family || false,
+        transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
+        document_type: surveyData?.documentTypes || '',
+        pan: surveyData?.pan || '',
+        previous_license_no: surveyData?.previous_license_no || '',
+        license_expiry_date:
+          formatDateToDDMMYYYY(surveyData?.license_expiry_date) || '',
+        property_tax_payment_to_year:
+          parseInt(surveyData?.property_tax_payment_to_year) || 0,
+        land_transfer_explanation: surveyData?.land_transfer_explanation || '',
+        occupy: surveyData?.occupy || false,
+        occupy_from_year: parseInt(surveyData?.occupy_from_year) || 0,
+        present_occupier_name: surveyData?.present_occupier_name || '',
+        occupier_guardian_name: surveyData?.occupier_guardian_name || '',
+        adsr_name: surveyData?.adsr_name || '',
+        is_same_owner: surveyData?.is_same_owner || false,
+        rented_to_whom: surveyData?.rented_to_whom || '',
+        district_id: parseInt(surveyData?.district_id) || 0,
+        police_station_id: parseInt(surveyData?.police_station_id) || 0,
+        hat_id: parseInt(surveyData?.hat_id) || 0,
+        mouza_id: surveyData?.mouza_id || '',
+        stall_no: surveyData?.stall_no || '',
+        holding_no: surveyData?.holding_no || '',
+        jl_no: surveyData?.jl_no || '',
+        khatian_no: surveyData?.khatian_no || '',
+        plot_no: surveyData?.plot_no || '',
+        // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
+        area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
+        // direction: surveyData?.direction || "", direction commented out
+        latitude: parseFloat(surveyData?.latitude) || 0.0,
+        longitude: parseFloat(surveyData?.longitude) || 0.0,
+        land_valuation_amount:
+          parseFloat(surveyData?.land_valuation_amount) || 0.0,
+        user_id: parseInt(surveyData?.user_id) || 0,
+        remarks: surveyData.remarks || '',
+      })
+    );
 
     if (surveyData.document_image && surveyData.document_image.uri) {
       formData.append('documentImage', {
         uri: surveyData.document_image.uri,
         name: 'document.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('documentImage', "");
+      formData.append('documentImage', '');
     }
 
     if (surveyData.pan_image && surveyData.pan_image.uri) {
@@ -362,32 +339,35 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.pan_image.uri,
         name: 'document.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('panImage', "");
+      formData.append('panImage', '');
     }
 
-    if (surveyData.residential_certificate_attached && surveyData.residential_certificate_attached.uri) {
+    if (
+      surveyData.residential_certificate_attached &&
+      surveyData.residential_certificate_attached.uri
+    ) {
       formData.append('residentialCertificateAttached', {
         uri: surveyData.residential_certificate_attached.uri,
         name: 'residential_certificate.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('residentialCertificateAttached', "");
+      formData.append('residentialCertificateAttached', '');
     }
 
-    if (surveyData.trade_license_attached && surveyData.trade_license_attached.uri) {
+    if (
+      surveyData.trade_license_attached &&
+      surveyData.trade_license_attached.uri
+    ) {
       formData.append('tradeLicenseAttached', {
         uri: surveyData.trade_license_attached.uri,
         name: 'trade_license.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('tradeLicenseAttached', "");
+      formData.append('tradeLicenseAttached', '');
     }
 
     if (surveyData.affidavit_attached && surveyData.affidavit_attached.uri) {
@@ -395,43 +375,48 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.affidavit_attached.uri,
         name: 'affidavit.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('affidavitAttached', "");
+      formData.append('affidavitAttached', '');
     }
 
-    if (surveyData.warision_certificate_attached && surveyData.warision_certificate_attached.uri) {
+    if (
+      surveyData.warision_certificate_attached &&
+      surveyData.warision_certificate_attached.uri
+    ) {
       formData.append('warisionCertificateAttached', {
         uri: surveyData.warision_certificate_attached.uri,
         name: 'warision_certificate.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('warisionCertificateAttached', "");
+      formData.append('warisionCertificateAttached', '');
     }
 
-    if (surveyData.death_certificate_attached && surveyData.death_certificate_attached.uri) {
+    if (
+      surveyData.death_certificate_attached &&
+      surveyData.death_certificate_attached.uri
+    ) {
       formData.append('deathCertificateAttached', {
         uri: surveyData.death_certificate_attached.uri,
         name: 'death_certificate.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('deathCertificateAttached', "");
+      formData.append('deathCertificateAttached', '');
     }
 
-    if (surveyData.noc_legal_heirs_attached && surveyData.noc_legal_heirs_attached.uri) {
+    if (
+      surveyData.noc_legal_heirs_attached &&
+      surveyData.noc_legal_heirs_attached.uri
+    ) {
       formData.append('nocLegalHeirsAttached', {
         uri: surveyData.noc_legal_heirs_attached.uri,
         name: 'noc_legal_heirs.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('nocLegalHeirsAttached', "");
+      formData.append('nocLegalHeirsAttached', '');
     }
 
     if (surveyData.sketch_map_attached && surveyData.sketch_map_attached.uri) {
@@ -439,10 +424,9 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.sketch_map_attached.uri,
         name: 'sketch_map.jpg',
         type: 'image/jpeg',
-       
       } as any);
     } else {
-      formData.append('sketchMapAttached', "");
+      formData.append('sketchMapAttached', '');
     }
 
     if (surveyData.stall_image1 && surveyData.stall_image1.uri) {
@@ -450,10 +434,10 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.stall_image1.uri,
         name: 'stall_image1.jpg',
         type: 'image/jpeg',
-        exif: surveyData.stall_image1.exif || "",
+        exif: surveyData.stall_image1.exif || '',
       } as any);
     } else {
-      formData.append('stallImage1', "");
+      formData.append('stallImage1', '');
     }
 
     if (surveyData.stall_image2 && surveyData.stall_image2.uri) {
@@ -461,21 +445,24 @@ export async function saveSurveyOnline(surveyData: any) {
         uri: surveyData.stall_image2.uri,
         name: 'stall_image2.jpg',
         type: 'image/jpeg',
-        exif: surveyData.stall_image2.exif || "",
+        exif: surveyData.stall_image2.exif || '',
       } as any);
     } else {
-      formData.append('stallImage2', "");
+      formData.append('stallImage2', '');
     }
 
-    if (surveyData.land_valuation_document && surveyData.land_valuation_document.uri) {
+    if (
+      surveyData.land_valuation_document &&
+      surveyData.land_valuation_document.uri
+    ) {
       formData.append('landValuationDoc', {
         uri: surveyData.land_valuation_document.uri,
         name: 'land_valuation_document.jpg',
         type: 'image/jpeg',
-        exif: surveyData.land_valuation_document.exif || "",
+        exif: surveyData.land_valuation_document.exif || '',
       } as any);
     } else {
-      formData.append('landValuationDoc', "");
+      formData.append('landValuationDoc', '');
     }
 
     const requestOptions = {
@@ -490,62 +477,54 @@ export async function saveSurveyOnline(surveyData: any) {
     //     requestOptions
     //   );
 
-    const response = await fetch(
-      url,
-      requestOptions
-    );
-
-    
+    const response = await fetch(url, requestOptions);
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
 
-    console.log("data",data);
+    console.log('data', data);
 
     return data;
   } catch (error) {
     console.log('Error fetching haat details:', error.message);
     throw error;
   }
-} 
-
+}
 
 export async function getDashboardCountBySurveyUserID(
   SurveyUserID: string | number
 ) {
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`;
 
-
-   const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`
-
-   console.log("url",url)
+  console.log('url', url);
   try {
     const yourTokenVariable = getAuthToken();
 
-    console.log("token" , yourTokenVariable);
-    const response = await fetch(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    console.log('token', yourTokenVariable);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -556,33 +535,28 @@ export async function getDashboardCountBySurveyUserID(
   }
 }
 
-export async function getNumberOfStallsPerMarketID(
-  UserID: string | number
-) {
-
-
-
-  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getNumberOfStallsPerMarketID?UserID=${UserID}` : Constants?.expoConfig?.extra?.BASE_URL+`/getNumberOfStallsPerMarketID?UserID=${UserID}`;
+export async function getNumberOfStallsPerMarketID(UserID: string | number) {
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getNumberOfStallsPerMarketID?UserID=${UserID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getNumberOfStallsPerMarketID?UserID=${UserID}`;
 
   try {
     const yourTokenVariable = getAuthToken();
-    const response = await fetch(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${yourTokenVariable}`,
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
     }
 
     if (!response.ok) {
-      throw { status: response.status, message: "API Error" };
+      throw { status: response.status, message: 'API Error' };
     }
 
     const data = await response.json();
@@ -592,38 +566,35 @@ export async function getNumberOfStallsPerMarketID(
     throw error;
   }
 }
-
 
 export async function getUserDetailsByPhoneNumber(phoneNo: string | number) {
-  
-
-  const url = process.env.EXPO_PUBLIC_BASE_URL ? `${process.env.EXPO_PUBLIC_BASE_URL}/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}` : Constants?.expoConfig?.extra?.BASE_URL+`/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`;
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`;
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getUserDetailsByPhoneNumber?MobileNumber={ThanaID}`
- try {
-   const yourTokenVariable = getAuthToken();
-   const response = await fetch(
-    url,
-     {
-       method: 'POST',
-       headers: {
-         'Content-Type': 'application/json',
-         Authorization: `Bearer ${yourTokenVariable}`,
-       },
-     }
-   );
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
 
-   if (response.status === 401) {
-     throw { status: 401, message: 'Unauthorized: Please login again.' };
-   }
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
 
-   if (!response.ok) {
-     throw { status: response.status, message: "API Error" };
-   }
+    if (!response.ok) {
+      throw { status: response.status, message: 'API Error' };
+    }
 
-   const data = await response.json();
-   return data;
- } catch (error) {
-   console.log('Error jlno list:', error.message);
-   throw error;
- }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log('Error jlno list:', error.message);
+    throw error;
+  }
 }

@@ -131,7 +131,7 @@ android {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
 
-    applicationVariants.all { variant ->
+     applicationVariants.all { variant ->
         variant.outputs.all { output ->
             // Get app name and version
             def appName = "HMSurvey"
@@ -146,6 +146,8 @@ android {
             outputFileName = newApkName
         }
     }
+
+
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
