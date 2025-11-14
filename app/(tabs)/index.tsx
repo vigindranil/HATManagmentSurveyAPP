@@ -37,6 +37,7 @@ import {
 } from '../../api';
 import { useAuth } from '@/context/auth-context';
 import { useDashboard } from '@/context/dashboard-context';
+import CustomAlert from '@/components/CustomAlert';
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +50,12 @@ export default function Dashboard() {
   const [userDetails, setUserDetails] = useState<any>(null);
   const { needsRefresh } = useDashboard();
   const { setUser, setIsAuthenticated } = useAuth();
+  const [alertInfo, setAlertInfo] = useState({
+    visible: false,
+    type: 'success', // 'success' or 'error'
+    message: '',
+    context: undefined, // Initialize context
+  })
 
   React.useEffect(() => {
     loadSurveyStats();
@@ -70,40 +77,60 @@ export default function Dashboard() {
             setUserDetails(parsedUser2);
           }
         }
-      } catch (error) {
-        console.error('Error fetching dashboard data', error);
-        if (error.status === 401) {
-          setUser(null);
-          setIsAuthenticated(false);
-          await AsyncStorage.removeItem('user');
-          router.replace('/(auth)/login');
-        } else {
-          console.error('Error fetching dashboard data', error);
+        else {
+          setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Unable to find user.',
+            context:'Cannot_find',
+          });
         }
+      } catch (error) {
+          setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Unable to find user.',
+            context:'Cannot_find',
+          });
+          console.error('Error fetching dashboard data', error);
+        
       }
     };
     fetchUser();
   }, []);
 
-  console.log("userdetails", userDetails);
+  // console.log("userdetails", userDetails);
 
   useEffect(() => {
     async function load() {
-      if (userDetails && isOnline) {
-        const Data = await getDashboardCountBySurveyUserID(userDetails.UserID);
-        const stallData = await getNumberOfStallsPerMarketID(
-          userDetails.UserID
-        );
-        setDashboardData(Data?.data);
-        setStallData(stallData?.data);
+      try {
+        if (userDetails && isOnline) {
+          const Data = await getDashboardCountBySurveyUserID(userDetails.UserID);
+          const stallData = await getNumberOfStallsPerMarketID(
+            userDetails.UserID
+          );
+          setDashboardData(Data?.data);
+          setStallData(stallData?.data);
+        } else {
+          setDashboardData([]);
+          setStallData([]);
+        }
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        if (error.status === 401) {
+          setAlertInfo({
+              visible: true,
+              type: 'Unauthorized',
+              message: 'Your session has expired. Please log in again.',
+              context: 'unauthorized_access',
+          });
       }
-      else{
         setDashboardData([]);
         setStallData([]);
       }
     }
     load();
-  }, [userDetails,needsRefresh,isOnline]);
+  }, [userDetails, needsRefresh, isOnline]);
 
   const stats = [
     {
@@ -158,6 +185,23 @@ export default function Dashboard() {
     }
   };
 
+  const handleAlertConfirm = () => {
+    setAlertInfo({ ...alertInfo, visible: false });
+    // NEW: Handle unauthorized access context after alert dismissal
+    if (alertInfo.context === 'unauthorized_access') {
+      setUser(null);
+      setIsAuthenticated(false);
+      AsyncStorage.removeItem('user').then(() => {
+        router.replace('/(auth)/login');
+      });
+    }
+    if (alertInfo.context === 'Cannot_find') {
+      setUser(null);
+      setIsAuthenticated(false);
+      router.replace('/(auth)/login');
+    }
+  };
+
   return (
     <>
       <StatusBar
@@ -166,6 +210,15 @@ export default function Dashboard() {
         translucent={false}
       />
       <SafeAreaView style={styles.container}>
+
+      {alertInfo.visible && (
+        <CustomAlert
+          type={alertInfo.type}
+          message={alertInfo.message}
+          onConfirm={handleAlertConfirm}
+        />
+      )}
+
         <ScrollView showsVerticalScrollIndicator={false}>
           <OfflineIndicator />
           <LinearGradient

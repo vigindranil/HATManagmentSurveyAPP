@@ -105,7 +105,7 @@ export default function Settings() {
         // If we reach here, user not found
         setAlertInfo({
           visible: true,
-          type: 'error',
+          type: 'Unauthorized',
           message: 'Your session has expired or user not found. Logging out...',
           onConfirm: handleForceLogout,
           onCancel: handleForceLogout,
@@ -114,7 +114,7 @@ export default function Settings() {
         // If error fetching user, also force logout
         setAlertInfo({
           visible: true,
-          type: 'error',
+          type: 'Unauthorized',
           message: 'There was an error verifying your session. Logging out...',
           onConfirm: handleForceLogout,
           onCancel: handleForceLogout,

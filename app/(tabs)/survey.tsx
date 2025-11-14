@@ -129,9 +129,9 @@ interface SurveyData {
 // Define an interface for AlertInfo with a context property
 interface AlertInfo {
   visible: boolean;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'Permission Denied' | 'Something went Wrong' | 'Survey Failure' | 'Invalid' | 'Missing Information' | 'Unauthorized' | 'Autofill Successful' | 'User Not Found' | 'User Details Unavailable'; // Extended types
   message: string;
-  context?: 'survey_submission' | 'autofill_success' | undefined; // Add a context to differentiate alerts
+  context?: 'survey_submission' | 'autofill_success' | 'unauthorized_access' | undefined; // Added 'unauthorized_access' context
 }
 
 export default function Survey() {
@@ -643,12 +643,15 @@ export default function Survey() {
       } catch (err) {
         const error = err as any;
         if (error.status === 401) {
-          setUsers(null);
-          setIsAuthenticated(false);
-          await AsyncStorage.removeItem('user');
-          router.replace('/(auth)/login');
+            // Show alert for unauthorized access
+            setAlertInfo({
+                visible: true,
+                type: 'Unauthorized',
+                message: 'Your session has expired. Please log in again.',
+                context: 'unauthorized_access',
+            });
         } else {
-          console.error('Error fetching districts:', error.message);
+            console.error('Error fetching districts:', error.message);
         }
       }
     };
@@ -660,6 +663,14 @@ export default function Survey() {
     if (alertInfo.type === 'success' && alertInfo.context === 'survey_submission') {
       setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian' });
       setCurrentStep(0);
+    }
+    // NEW: Handle unauthorized access context after alert dismissal
+    if (alertInfo.context === 'unauthorized_access') {
+      setUsers(null);
+      setIsAuthenticated(false);
+      AsyncStorage.removeItem('user').then(() => {
+        router.replace('/(auth)/login');
+      });
     }
   };
 
@@ -980,6 +991,7 @@ export default function Survey() {
             setNeedsRefresh(true);
             setMobileAutofillSuccessful(false);
           } else {
+            
             setAlertInfo({
               visible: true,
               type: 'Something went Wrong',
@@ -989,10 +1001,13 @@ export default function Survey() {
         } catch (err) {
           const error = err as any;
           if (error.status === 401) {
-            setUsers(null);
-            setIsAuthenticated(false);
-            await AsyncStorage.removeItem('user');
-            router.replace('/(auth)/login');
+            // Show alert for unauthorized access
+            setAlertInfo({
+                visible: true,
+                type: 'Unauthorized',
+                message: 'Your session has expired. Please log in again.',
+                context: 'unauthorized_access',
+            });
           } else {
             setAlertInfo({
               visible: true,
@@ -1060,10 +1075,13 @@ export default function Survey() {
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
-        setUsers(null);
-        setIsAuthenticated(false);
-        await AsyncStorage.removeItem('user');
-        router.replace('/(auth)/login');
+        // Show alert for unauthorized access
+        setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Your session has expired. Please log in again.',
+            context: 'unauthorized_access',
+        });
       } else {
         console.error('Error fetching dependent district data:', error.message);
       }
@@ -1116,10 +1134,13 @@ export default function Survey() {
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
-        setUsers(null);
-        setIsAuthenticated(false);
-        await AsyncStorage.removeItem('user');
-        router.replace('/(auth)/login');
+        // Show alert for unauthorized access
+        setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Your session has expired. Please log in again.',
+            context: 'unauthorized_access',
+        });
       } else {
         console.error('Error fetching mouza, ADSR, or JL No data:', error.message);
       }
