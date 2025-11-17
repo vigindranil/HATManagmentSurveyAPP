@@ -143,7 +143,7 @@ export default function Survey() {
   const [user, setUser] = useState<any>(null);
   const [loadImage, setLoadImage] = useState<any>(false);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
-  
+
   const [adsrOptions, setAdsrOptions] = useState([]);
   const [jlNOOptions, setJlNOOptions] = useState([]); // jlNOOptions now holds dropdown options for JL No
 
@@ -159,7 +159,7 @@ export default function Survey() {
   });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
   const { setNeedsRefresh } = useDashboard();
-  
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -191,7 +191,7 @@ export default function Survey() {
   const [isSaving, setIsSaving] = useState(false);
   const [date, setDate] = useState(new Date()); // Correct useState for date
   const [showPicker, setShowPicker] = useState(false);
- 
+
   const [loadingImage, setLoadingImage] = useState<string | null>(null);
 
   const yesNoOptions = [
@@ -203,14 +203,14 @@ export default function Survey() {
     { key: '1', value: 'Aadhar' },
     { key: '2', value: 'Voter ID' },
   ];
-  
+
   const transferRelationshipOptions = [
-      { key: '3', value: 'Son' },
-      { key: '5', value: 'Mother' },
-      { key: '4', value: 'Father' },
-      { key: '1', value: 'Wife' },
-      { key: '2', value: 'Daughter' },
-      { key: '6', value: 'Others' },
+    { key: '3', value: 'Son' },
+    { key: '5', value: 'Mother' },
+    { key: '4', value: 'Father' },
+    { key: '1', value: 'Wife' },
+    { key: '2', value: 'Daughter' },
+    { key: '6', value: 'Others' },
   ];
 
   const steps = [
@@ -1632,6 +1632,10 @@ export default function Survey() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 
+        1. CustomAlert is still positioned absolutely/modally, 
+           so it stays outside the main layout flow.
+      */}
       {alertInfo.visible && (
         <CustomAlert
           type={alertInfo.type}
@@ -1640,11 +1644,9 @@ export default function Survey() {
         />
       )}
 
-     <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={15}
-      >
+      {/* 
+        2. Static Header (fixed at top) is moved OUTSIDE KeyboardAvoidingView
+      */}
       <LinearGradient
         colors={[currentStepData.color, currentStepData.color + '90']}
         style={styles.header}
@@ -1687,21 +1689,38 @@ export default function Survey() {
         </View>
       </LinearGradient>
 
+      {/* 3. Step Indicator is also moved OUTSIDE KeyboardAvoidingView */}
       <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
 
-     
+      {/* 
+        4. KeyboardAvoidingView now only wraps the scrollable content.
+           It has flex: 1 to take up the space between the static header/indicator and the footer.
+      */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }} // Crucial: takes all remaining vertical space
+        keyboardVerticalOffset={0} // Can use 0 or remove entirely if behavior="padding" is fine
+      >
         <ScrollView
           ref={scrollViewRef}
           style={styles.formContainer}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          contentContainerStyle={{ 
+            // Add extra bottom padding to ensure the last field is not hidden 
+            // behind the fixed buttonContainer when scrolling
+            paddingBottom: 20 
+          }}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.formContent}>
             {currentStepData.fields.map(renderField)}
           </View>
         </ScrollView>
-     
+      </KeyboardAvoidingView>
 
+      {/* 
+        5. Button Container (footer) is moved OUTSIDE KeyboardAvoidingView 
+           to keep it fixed at the bottom.
+      */}
       <View style={styles.buttonContainer}>
         {currentStep > 0 && (
           <TouchableOpacity
@@ -1754,7 +1773,6 @@ export default function Survey() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -1763,7 +1781,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    marginBottom: -40,
+    // marginBottom: -20,
   },
   header: {
     paddingHorizontal: 20,
@@ -1948,7 +1966,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    marginBottom: 10,
+    marginBottom: -50,
+    
   },
   dialogbox: {
     justifyContent: 'center',
