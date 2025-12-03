@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Redirect, useRouter } from 'expo-router';
-import { jwtDecode } from 'jwt-decode';
+
 import {
   Eye,
   EyeOff,
@@ -28,6 +28,7 @@ import { BlurView } from 'expo-blur';
 import { authentication } from '../../api';
 import { useAuth } from '@/context/auth-context';
 
+
 const { width, height } = Dimensions.get('window');
 
 export default function Login() {
@@ -36,6 +37,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+ 
   const [error, setError] = useState('');
   const auth = useAuth();
   const login = auth.login;
@@ -46,6 +48,7 @@ export default function Login() {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const buttonScale = useRef(new Animated.Value(1)).current;
+
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -106,15 +109,7 @@ export default function Login() {
       setIsLoading(false);
     }
 
-    // setTimeout(() => {
-    //   setIsLoading(false);
-    //   Animated.timing(buttonScale, {
-    //     toValue: 1,
-    //     duration: 150,
-    //     useNativeDriver: true,
-    //   }).start();
-    //   router.replace('/(tabs)');
-    // }, 2000);
+    
   };
 
   useEffect(() => {
@@ -142,6 +137,8 @@ export default function Login() {
     styles.input,
     focusedField === fieldName && styles.inputFocused,
   ];
+
+  const isFormValid = username.trim() !== '' && password.trim() !== '';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -199,7 +196,7 @@ export default function Login() {
                     style={[
                       styles.inputContainer,
                       focusedField === 'username' &&
-                        styles.inputContainerFocused,
+                      styles.inputContainerFocused,
                     ]}
                   >
                     <View style={styles.inputIcon}>
@@ -231,7 +228,7 @@ export default function Login() {
                     style={[
                       styles.inputContainer,
                       focusedField === 'password' &&
-                        styles.inputContainerFocused,
+                      styles.inputContainerFocused,
                     ]}
                   >
                     <View style={styles.inputIcon}>
@@ -275,12 +272,12 @@ export default function Login() {
                       isLoading && styles.loginButtonLoading,
                     ]}
                     onPress={handleLogin}
-                    disabled={isLoading}
+                    disabled={isLoading || !isFormValid}
                     activeOpacity={0.8}
                   >
                     <LinearGradient
                       colors={
-                        isLoading
+                        isLoading || !isFormValid
                           ? ['#64748b', '#475569']
                           : ['#2563EB', '#3B82F6']
                       }

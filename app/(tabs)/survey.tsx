@@ -7,43 +7,28 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Dimensions,
   Image,
-  Button,
   Platform,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from "@react-native-async-storage/async-storage"
-import { AlertNotificationRoot } from 'react-native-alert-notification';
 import CustomAlert from '@/components/CustomAlert';
 import { isCameraOpenRef } from '@/utils/GPSGuard';
-
-
+import { formatDropdownData } from '@/functions/survey_function';
 import {
   ChevronLeft,
   ChevronRight,
-  MapPin,
-  Building,
-  User,
-  FileText,
-  Phone,
-  MessageSquare,
   CircleCheck as CheckCircle,
-  Circle,
   Calendar,
   XCircle,
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useOfflineStorage } from '@/hooks/useOfflineStorage';
-import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { SelectList } from 'react-native-dropdown-select-list';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ALERT_TYPE, Dialog, Toast } from 'react-native-alert-notification';
-// import { saveSurveyUser } from '@/api';
 import { useDashboard } from '@/context/dashboard-context';
-
 import {
   getAllDistrictList,
   getPoliceStationsByDistrictId,
@@ -59,9 +44,8 @@ import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
+import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields } from '../../constant/survey_constant';
 
-
-const { width } = Dimensions.get('window');
 
 type ImageFieldType = {
   uri: string;
@@ -135,13 +119,14 @@ interface AlertInfo {
 }
 
 export default function Survey() {
+  
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [district, setDistrict] = useState([]);
   const [policeStationOptions, setPoliceStationOptions] = useState([]);
   const [mouzaOptions, setMouzaOptions] = useState([]);
   const [user, setUser] = useState<any>(null);
-  const [loadImage, setLoadImage] = useState<any>(false);
+
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
 
   const [adsrOptions, setAdsrOptions] = useState([]);
@@ -149,6 +134,18 @@ export default function Survey() {
 
   // NEW STATE: To track if autofill was successful for mobile number
   const [mobileAutofillSuccessful, setMobileAutofillSuccessful] = useState(false);
+   const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [date, setDate] = useState(new Date()); // Correct useState for date
+  const [showPicker, setShowPicker] = useState(false);
+  const [loadingImage, setLoadingImage] = useState<string | null>(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // NEW REF: Tracks the status/type that was active the last time the user successfully clicked "Next" on Step 0.
+  const lastConfirmedStep0State = useRef<{ licenseType: string | null, applicationStatus: string | null }>({
+    licenseType: null,
+    applicationStatus: null
+  });
 
   // Initialize alertInfo with context
   const [alertInfo, setAlertInfo] = useState<AlertInfo>({
@@ -187,471 +184,53 @@ export default function Survey() {
     }
   }, [currentStep]);
 
-  const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [date, setDate] = useState(new Date()); // Correct useState for date
-  const [showPicker, setShowPicker] = useState(false);
+ 
 
-  const [loadingImage, setLoadingImage] = useState<string | null>(null);
+    useEffect(() => {
+    const showListener = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardVisible(true);
+      
+    });
 
-  const yesNoOptions = [
-    { key: 'true', value: 'Yes' },
-    { key: 'false', value: 'No' },
-  ];
+    const hideListener = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+     
+    });
 
-  const documentTypes = [
-    { key: '1', value: 'Aadhar' },
-    { key: '2', value: 'Voter ID' },
-  ];
-
-  const transferRelationshipOptions = [
-    { key: '3', value: 'Son' },
-    { key: '5', value: 'Mother' },
-    { key: '4', value: 'Father' },
-    { key: '1', value: 'Wife' },
-    { key: '2', value: 'Daughter' },
-    { key: '6', value: 'Others' },
-  ];
-
-  const steps = [
-    {
-      title: 'Application Metadata',
-      icon: User,
-      color: '#059669',
-      bgColor: '#F0FDF4',
-      description: 'Owner information',
-      fields: [
-        {
-          key: 'licenseType',
-          label: 'License Type',
-          required: true,
-          placeholder: 'Select license type',
-        },
-        {
-          key: 'applicationStatus',
-          label: 'Application Status',
-          required: true,
-          placeholder: 'Select Application Status',
-        },
-        {
-          key: 'applicationFor',
-          label: 'Application For',
-          required: true,
-          placeholder: 'Select Application For',
-        },
-        {
-          key: 'usesType',
-          label: 'Usage Type',
-          required: true,
-          placeholder: 'Select Uses Type',
-        },
-      ],
-    },
-    {
-      title: 'Applicant Details',
-      icon: FileText,
-      color: '#A33BB8',
-      bgColor: '#FFF7ED',
-      description: 'Applicant personal and document information',
-      fields: [
-        {
-          key: 'mobile',
-          label: 'Mobile Number',
-          required: true,
-          placeholder: 'Enter mobile number',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'name',
-          label: 'Name',
-          required: true,
-          placeholder: 'Enter applicant name',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'guardian_name',
-          label: "Guardian's Name",
-          required: true,
-          placeholder: "Enter father's/husband's name",
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'address',
-          label: 'Address',
-          required: true,
-          placeholder: 'Enter address',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'citizenship',
-          label: 'Citizenship',
-          required: true,
-          placeholder: 'Enter citizenship',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'pin_code',
-          label: 'Pin Code',
-          required: true,
-          placeholder: 'Enter pin code',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'documentTypes',
-          label: 'Document Type',
-          required: true,
-          placeholder: 'Select document type',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'document_image',
-          label: 'Document Image',
-          required: true,
-          placeholder: 'Upload document image',
-          showFor: ['new', 'existing', 'transfer'],
-          type: 'image',
-        },
-        {
-          key: 'pan',
-          label: 'PAN',
-          required: true,
-          placeholder: 'Enter PAN number',
-          showFor: ['new', 'existing', 'transfer'],
-        },
-        {
-          key: 'pan_image',
-          label: 'PAN Image',
-          required: true,
-          placeholder: 'Upload PAN image',
-          showFor: ['new', 'existing', 'transfer'],
-          type: 'image',
-        },
-        {
-          key: 'residential_certificate_attached',
-          label: 'Residential Certificate (Attachment)',
-          required: false,
-          placeholder: 'Upload residential certificate',
-          showFor: ['new', 'existing', 'transfer'],
-          type: 'image',
-        },
-        {
-          key: 'trade_license_attached',
-          label: 'Trade License (Attachment)',
-          required: true,
-          placeholder: 'Upload trade license',
-          showFor: ['new', 'existing', 'transfer'],
-          type: 'image',
-        },
-        {
-          key: 'previous_license_no',
-          label: 'Previous License No',
-          required: true, 
-          placeholder: 'Enter previous license number ',
-          showFor: ['existing', 'transfer'],
-        },
-        {
-          key: 'license_expiry_date',
-          label: 'License Expiry Date',
-          required: true,
-          placeholder: 'Select license expiry date ',
-          showFor: ['existing', 'transfer'],
-          type: 'date',
-        },
-        {
-          key: 'property_tax_payment_to_year',
-          label: 'Property Tax Paid Up To Year',
-          required: true,
-          placeholder: 'Enter year up to which property tax is paid ',
-          showFor: ['existing', 'transfer'],
-        },
-        {
-          key: 'is_within_family',
-          label: 'Is Within Family',
-          required: true,
-          placeholder: 'Is the transfer within family?',
-          showFor: ['transfer'],
-          type: 'dropdown',
-        },
-        {
-          key: 'transfer_relationship',
-          label: 'Transfer Relationship',
-          required: true,
-          placeholder: 'Select relationship',
-          showFor: ['transfer'],
-          type: 'dropdown', 
-          dependsOn: { key: 'is_within_family', value: true },
-        },
-        {
-          key: 'land_transfer_explanation',
-          label: 'Land Transfer Explanation',
-          required: true,
-          placeholder: 'Explain land transfer ',
-          multiline: true, // Mark as multiline
-          showFor: ['transfer'],
-        },
-        {
-          key: 'occupy',
-          label: 'Is property occupied?',
-          required: true,
-          placeholder: 'Select an option',
-          showFor: ['transfer'],
-          type: 'dropdown',
-        },
-        {
-          key: 'occupy_from_year',
-          label: 'Occupy From Year',
-          required: true,
-          placeholder: 'Enter year of occupation ',
-          showFor: ['transfer'],
-          dependsOn: { key: 'occupy', value: true },
-        },
-        {
-          key: 'present_occupier_name',
-          label: 'Present Occupier Name',
-          required: true,
-          placeholder: 'Enter present occupier name',
-          showFor: ['transfer'],
-          dependsOn: { key: 'occupy', value: true },
-        },
-        {
-          key: 'occupier_guardian_name',
-          label: "Occupier's Guardian Name",
-          required: true,
-          placeholder: "Enter occupier's guardian name ",
-          showFor: ['transfer'],
-          dependsOn: { key: 'occupy', value: true },
-        },
-        {
-          key: 'affidavit_attached',
-          label: 'Affidavit (Attachment)',
-          required: true,
-          placeholder: 'Upload affidavit',
-          showFor: ['transfer'],
-          type: 'image',
-        },
-        {
-          key: 'warision_certificate_attached',
-          label: 'Warision Certificate (Attachment)',
-          required: false,
-          placeholder: 'Upload warision certificate ',
-          showFor: ['transfer'],
-          type: 'image',
-        },
-        {
-          key: 'death_certificate_attached',
-          label: 'Death Certificate (Attachment)',
-          required: false,
-          placeholder: 'Upload death certificate ',
-          showFor: ['transfer'],
-          type: 'image',
-        },
-        {
-          key: 'noc_legal_heirs_attached',
-          label: 'NOC Legal Heirs (Attachment)',
-          required: true,
-          placeholder: 'Upload NOC from legal heirs',
-          showFor: ['transfer'],
-          type: 'image',
-        },
-      ],
-    },
-    {
-      title: 'Plot Details',
-      icon: Building,
-      color: '#0891B2',
-      bgColor: '#F0FDFA',
-      description: 'Property information',
-      fields: [
-        {
-          key: 'district_id',
-          label: 'District',
-          required: true,
-          placeholder: 'Select district',
-        },
-        {
-          key: 'police_station_id',
-          label: 'Police Station',
-          required: true,
-          placeholder: 'Select police station',
-        },
-        {
-          key: 'hat_id',
-          label: 'Hat',
-          required: true,
-          placeholder: 'Select hat',
-        },
-        {
-          key: 'mouza_id',
-          label: 'Mouza',
-          required: true,
-          placeholder: 'Select mouza',
-        },
-        {
-          key: 'adsr_name',
-          label: 'ADSR Name',
-          required: true,
-          placeholder: 'Select ADSR Office',
-        },
-        {
-          key: 'stall_no',
-          label: 'Stall No',
-          required: true,
-          placeholder: 'Enter stall number',
-        },
-        {
-          key: 'holding_no',
-          label: 'Holding No',
-          required: true,
-          placeholder: 'Enter holding number',
-        },
-        {
-          key: 'jl_no',
-          label: 'JL No',
-          required: true,
-          placeholder: 'Enter JL number',
-        },
-        {
-          key: 'khatian_no',
-          label: 'Khatian No',
-          required: true,
-          placeholder: 'Enter khatian number',
-        },
-        {
-          key: 'plot_no',
-          label: 'Plot No',
-          required: true,
-          placeholder: 'Enter plot number',
-        },
-        {
-          key: 'area_com_sqft',
-          label: 'Area (sqft)',
-          required: true,
-          placeholder: 'Enter commercial area in sqft',
-        },
-        // {
-        //   key: 'direction',
-        //   label: 'Direction',
-        //   required: true,
-        //   placeholder: 'Enter direction',
-        // },
-        {
-          key: 'latitude',
-          label: 'Latitude',
-          required: false,
-          placeholder: 'Enter latitude ',
-        },
-        {
-          key: 'longitude',
-          label: 'Longitude',
-          required: false,
-          placeholder: 'Enter longitude',
-        },
-        {
-          key: 'sketch_map_attached',
-          label: 'Sketch Map (Attachment)',
-          required: false,
-          placeholder: 'Upload sketch map',
-          type: 'image',
-        },
-        {
-          key: 'land_valuation_document',
-          label: 'Land Valuation document (Attachment)',
-          required: true,
-          placeholder: 'Upload Land Valuation document',
-          type: 'image',
-        },
-        {
-          key: 'land_valuation_amount',
-          label: 'Land Valuation Amount',
-          required: true,
-          placeholder: 'Enter Amount',
-        },
-        {
-          key: 'user_id',
-          label: 'User ID',
-          required: true,
-          placeholder: 'Enter user ID',
-        },
-      ],
-    },
-    {
-      title: 'Images',
-      icon: FileText,
-      color: '#0EA5E9',
-      bgColor: '#E0F2FE',
-      description: 'Upload images related to the stall',
-      fields: [
-        {
-          key: 'stall_image1',
-          label: 'Stall Image 1',
-          required: true,
-          placeholder: 'Tap to select or take a photo',
-          type: 'images',
-        },
-        {
-          key: 'stall_image2',
-          label: 'Stall Image 2',
-          required: false,
-          placeholder: 'Tap to select or take a photo',
-          type: 'images',
-        },
-      ],
-    },
-    {
-      title: 'Remarks',
-      icon: MessageSquare,
-      color: '#EA580C',
-      bgColor: '#FFF7ED',
-      description: 'Additional notes',
-      fields: [
-        {
-          key: 'remarks',
-          label: 'Remarks',
-          required: true,
-          placeholder: 'Enter any additional remarks or notes',
-          multiline: true,
-        },
-      ],
-    },
-  ];
-
-  const licenseType = [
-    { key: '1', value: 'Holding' },
-    { key: '2', value: 'Stall' },
-  ];
-  const applicationStatus = [
-    { key: '1', value: 'New' },
-    { key: '2', value: 'Existing' },
-    { key: '3', value: 'Transfer' },
-  ];
-  const usesType = [
-    { key: '1', value: 'Commercial' },
-    { key: '2', value: 'Residential cum Commercial' },
-  ];
-  const applicationFor = [
-    { key: '1', value: 'Self' },
-    { key: '2', value: 'Family' },
-    { key: '3', value: 'Others' },
-  ];
+    return () => {
+      showListener.remove();
+      hideListener.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
         const districtList = await getAllDistrictList();
-        // Format district data immediately after fetching
+       if(districtList?.status === 0){
+       
         setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
+       }
+       else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching districts.',
+         
+        }); 
+       }
       } catch (err) {
         const error = err as any;
         if (error.status === 401) {
-            // Show alert for unauthorized access
-            setAlertInfo({
-                visible: true,
-                type: 'Unauthorized',
-                message: 'Your session has expired. Please log in again.',
-                context: 'unauthorized_access',
-            });
+          // Show alert for unauthorized access
+          setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Your session has expired. Please log in again.',
+            context: 'unauthorized_access',
+          });
         } else {
-            console.error('Error fetching districts:', error.message);
+          console.error('Error fetching districts:', error.message);
         }
       }
     };
@@ -663,6 +242,7 @@ export default function Survey() {
     if (alertInfo.type === 'success' && alertInfo.context === 'survey_submission') {
       setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian' });
       setCurrentStep(0);
+      lastConfirmedStep0State.current = { licenseType: null, applicationStatus: null };
     }
     // NEW: Handle unauthorized access context after alert dismissal
     if (alertInfo.context === 'unauthorized_access') {
@@ -674,27 +254,22 @@ export default function Survey() {
     }
   };
 
+  
   const updateField = (key: string, value: any) => {
     setSurveyData((prev) => {
-      const newData = { ...prev, [key]: value };
-      steps.forEach((step) => {
-        step.fields.forEach((field) => {
-          if (
-            field.dependsOn &&
-            field.dependsOn.key === key &&
-            value !== field.dependsOn.value
-          ) {
-            delete (newData as Partial<SurveyData>)[
-              field.key as keyof SurveyData
-            ];
-          }
-        });
-      });
-      return newData;
+      const prevValue = prev[key as keyof SurveyData];
+      const strPrev = prevValue === null || prevValue === undefined ? '' : String(prevValue);
+      const strNew = value === null || value === undefined ? '' : String(value);
+
+      if (strPrev === strNew) {
+        return prev;
+      }
+      return { ...prev, [key]: value };
     });
   };
 
   const handleStallImagePick = async (fieldKey: string) => {
+    Keyboard.dismiss();
     isCameraOpenRef.current = true;
     Alert.alert(
       '📸 Select Image Source',
@@ -722,8 +297,7 @@ export default function Survey() {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
                   if (status !== 'granted') {
-                    // setAlertInfo({ visible: true, type: 'error', message: 'Location permission is required.'});
-                    setAlertInfo({ visible: true, type:'Permission Denied', message: 'Location permission is required.'});
+                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
                     return;
                   }
                   const loc = await Location.getCurrentPositionAsync({});
@@ -767,7 +341,7 @@ export default function Survey() {
                   const { status } =
                     await Location.requestForegroundPermissionsAsync();
                   if (status !== 'granted') {
-                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.'});
+                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
                     return;
                   }
                   const loc = await Location.getCurrentPositionAsync({});
@@ -791,12 +365,13 @@ export default function Survey() {
             }
           },
         },
-        { text: 'Cancel', style: 'cancel', onPress: () => {isCameraOpenRef.current = false;} },
+        { text: 'Cancel', style: 'cancel', onPress: () => { isCameraOpenRef.current = false; } },
       ]
     );
   };
 
   const handleImagePick = async (fieldKey: string) => {
+    Keyboard.dismiss();
     Alert.alert(
       '📸 Select Image Source',
       'How would you like to add or change the image?',
@@ -815,7 +390,7 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-                const compressedUri = await compressImageUri( result.assets[0].uri);
+                const compressedUri = await compressImageUri(result.assets[0].uri);
                 updateField(fieldKey, { uri: compressedUri });
               }
             } catch (err) {
@@ -840,7 +415,7 @@ export default function Survey() {
               });
 
               if (!result.canceled && result.assets) {
-                const compressedUri = await compressImageUri( result.assets[0].uri);
+                const compressedUri = await compressImageUri(result.assets[0].uri);
                 updateField(fieldKey, { uri: compressedUri });
               }
             } catch (err) {
@@ -851,7 +426,7 @@ export default function Survey() {
             }
           },
         },
-        { text: 'Cancel', style: 'cancel', onPress: () => {isCameraOpenRef.current = false;} },
+        { text: 'Cancel', style: 'cancel', onPress: () => { isCameraOpenRef.current = false; } },
       ]
     );
   };
@@ -872,7 +447,7 @@ export default function Survey() {
       if (field.key === 'stall_no' && surveyData.licenseType !== '2') continue;
 
       if (currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === 'property_tax_payment_to_year')) {
-          continue;
+        continue;
       }
 
       if (!field.required) continue;
@@ -892,85 +467,142 @@ export default function Survey() {
         fieldValue === ''
       ) {
         setAlertInfo({
-            visible: true,
-            type: 'Missing Information',
-            message: `${field.label} is required`,
+          visible: true,
+          type: 'Missing Information',
+          message: `${field.label} is required`,
         });
         return false;
       }
-      
+
       if (field.key === 'pan') {
         const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
         if (!panRegex.test(fieldValue)) {
-            setAlertInfo({
-                visible: true,
-                type: 'Invalid',
-                message: 'Invalid PAN format. Please use the format ABCDE1234F.',
-            });
-            return false;
+          setAlertInfo({
+            visible: true,
+            type: 'Invalid',
+            message: 'Invalid PAN format. Please use the format ABCDE1234F.',
+          });
+          return false;
         }
+      }
+
+      if (field.key === 'land_valuation_amount') {
+
+        const amount = parseFloat(fieldValue);
+        if (isNaN(amount)) {
+          setAlertInfo({
+            visible: true,
+            type: 'Invalid Amount',
+            message: 'Please enter a valid numeric value for the Land Valuation Amount.',
+          });
+          return false;
+        }
+
+        if (amount < 1000) {
+          setAlertInfo({
+            visible: true,
+            type: 'Amount Too Low',
+            message: 'The Land Valuation Amount must be at least ₹1,000.',
+          });
+          return false;
+        }
+
+
       }
 
       if (field.key === 'mobile') {
         const phoneRegex = /^[6-9]\d{9}$/;
         if (!phoneRegex.test(fieldValue)) {
-            setAlertInfo({
-                visible: true,
-                type: 'Invalid',
-                message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number.',
-            });
-            return false;
+          setAlertInfo({
+            visible: true,
+            type: 'Invalid',
+            message: 'Invalid phone number. Please enter a valid 10-digit Indian mobile number.',
+          });
+          return false;
         }
       }
     }
     return true;
   };
 
-  const numericFields = [
-    'mobile',
-    'pin_code',
-    'previous_license_no',
-    'property_tax_payment_to_year',
-    'occupy_from_year',
-    'stall_no',
-    'holding_no',
-    'khatian_no',
-    'plot_no',
-    'area_com_sqft',
-    'latitude',
-    'longitude',
-    'land_valuation_amount',
-  ];
+  
 
-  const formatDropdownData = (
-    data: any[],
-    keyField: string,
-    valueField: string
-  ) =>
-    (data || []).map((item) => {
-      let displayValue = '';
-      if (item && item[valueField] !== null && item[valueField] !== undefined) {
-        if (typeof item[valueField] === 'object' && !Array.isArray(item[valueField])) {
-          try {
-            displayValue = JSON.stringify(item[valueField]);
-            console.warn(`Object found for SelectList item value for keyField: ${keyField}, valueField: ${valueField}, problematic value: ${JSON.stringify(item[valueField])}. Stringifying it.`);
-          } catch (e) {
-            displayValue = '[Invalid Object]'; 
-            console.error(`Error stringifying object for SelectList item value for keyField: ${keyField}, valueField: ${valueField}`, item[valueField], e);
-          }
-        } else {
-          displayValue = String(item[valueField]);
-        }
-      }
-      return {
-        key: String(item[keyField]),
-        value: displayValue,
-      };
-    });
+  
 
   const nextStep = async () => {
     if (validateStep()) {
       if (currentStep < steps.length - 1) {
+
+        // --- NEW LOGIC: Handling Step 0 Transitions ---
+        if (currentStep === 0) {
+          setSurveyData(prev => {
+            const newData = { ...prev };
+
+            const currentType = newData.licenseType;
+            const currentStatus = newData.applicationStatus;
+            // Get the status/type that were active LAST time we moved forward
+            const lastStatus = lastConfirmedStep0State.current.applicationStatus;
+
+            // 1. License Type Consistency (Always enforce this logic)
+            if (currentType === '1') delete newData['stall_no']; // Holding
+            if (currentType === '2') delete newData['holding_no']; // Stall
+
+            // 2. Application Status Logic
+            const transferOnlyFields = [
+              'is_within_family', 'transfer_relationship', 'land_transfer_explanation',
+              'occupy', 'occupy_from_year', 'present_occupier_name', 'occupier_guardian_name',
+              'affidavit_attached', 'warision_certificate_attached', 'death_certificate_attached', 'noc_legal_heirs_attached'
+            ];
+            const sharedFields = [
+              'previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year'
+            ];
+
+            const statusChanged = currentStatus !== lastStatus;
+
+            if (statusChanged) {
+              // Status HAS CHANGED since the last "Continue".
+              // This implies the user wants to switch contexts (e.g. Existing -> Transfer).
+              // We must clear shared fields to satisfy the "Clear on Change" requirement.
+
+              if (currentStatus === '1') { // New
+                // Wipe everything
+                transferOnlyFields.forEach(k => delete newData[k]);
+                sharedFields.forEach(k => delete newData[k]);
+              } else {
+                // Existing (2) or Transfer (3)
+                // User switched status. Wipe the shared fields to force fresh entry.
+                sharedFields.forEach(k => delete newData[k]);
+
+                // If not Transfer, wipe transfer fields
+                if (currentStatus !== '3') {
+                  transferOnlyFields.forEach(k => delete newData[k]);
+                }
+              }
+            } else {
+              // Status matches what was previously confirmed.
+              // This happens if user goes Back -> Changes selection -> Changes BACK to original -> Clicks Continue.
+              // In this case, we PRESERVE the data.
+
+              if (currentStatus === '1') { // New - always clear just to be safe
+                transferOnlyFields.forEach(k => delete newData[k]);
+                sharedFields.forEach(k => delete newData[k]);
+              } else if (currentStatus === '2') { // Existing
+                // Just ensure Transfer fields are gone (in case they were filled in a different session)
+                transferOnlyFields.forEach(k => delete newData[k]);
+              }
+              // If Transfer (3), we delete nothing. Persist all.
+            }
+
+            return newData;
+          });
+
+          // Update the Ref so we know what the "current" valid state is for next time
+          lastConfirmedStep0State.current = {
+            licenseType: surveyData.licenseType as string,
+            applicationStatus: surveyData.applicationStatus as string
+          };
+        }
+
         setCurrentStep(currentStep + 1);
       } else {
         setIsSaving(true);
@@ -984,14 +616,14 @@ export default function Survey() {
           if (response.status === 0) {
             setAlertInfo({
               visible: true,
-              type:  'success' ,
+              type: 'success',
               message: messages,
               context: 'survey_submission',
             });
             setNeedsRefresh(true);
             setMobileAutofillSuccessful(false);
           } else {
-            
+
             setAlertInfo({
               visible: true,
               type: 'Something went Wrong',
@@ -1003,10 +635,10 @@ export default function Survey() {
           if (error.status === 401) {
             // Show alert for unauthorized access
             setAlertInfo({
-                visible: true,
-                type: 'Unauthorized',
-                message: 'Your session has expired. Please log in again.',
-                context: 'unauthorized_access',
+              visible: true,
+              type: 'Unauthorized',
+              message: 'Your session has expired. Please log in again.',
+              context: 'unauthorized_access',
             });
           } else {
             setAlertInfo({
@@ -1025,62 +657,67 @@ export default function Survey() {
 
   const prevStep = () => {
     if (currentStep > 0) {
-      const newData = { ...surveyData };
-      const fieldsToClearCurrent = steps[currentStep].fields;
-      const fieldsToClearPrevious = steps[currentStep - 1].fields;
-      const allFieldsToClear = [
-        ...fieldsToClearCurrent,
-        ...fieldsToClearPrevious,
-      ];
-      allFieldsToClear.forEach((field) => {
-        if (field.key !== 'user_id' && field.key !== 'citizenship') {
-          delete (newData as Partial<SurveyData>)[
-            field.key as keyof SurveyData
-          ];
-        }
-      });
-      setSurveyData(newData);
       setCurrentStep(currentStep - 1);
-      setMobileAutofillSuccessful(false);
+      // setMobileAutofillSuccessful(false); // REMOVED to persist locked state
     }
   };
 
   const handleDistrictChange = async (selectedKey: any) => {
     const districtId = String(selectedKey);
+    // Prevent wiping if selecting the same district
+    if (surveyData.district_id === districtId) return;
+
     updateField('district_id', districtId);
-    
     // Clear all dependent fields in surveyData to empty string
-    updateField('police_station_id', ''); 
-    updateField('mouza_id', ''); 
-    updateField('hat_id', ''); 
-    updateField('adsr_name', ''); 
-    updateField('jl_no', ''); 
+    updateField('police_station_id', '');
+    updateField('mouza_id', '');
+    updateField('hat_id', '');
+    updateField('adsr_name', '');
+    updateField('jl_no', '');
 
     // Clear options for dependent dropdowns
     setPoliceStationOptions([]);
     setMouzaOptions([]);
     setHaatAllDetailsOptions([]);
-    setAdsrOptions([]); 
+    setAdsrOptions([]);
     setJlNOOptions([]); // Clear JL No options here too
 
-    if (!districtId) return; 
+    if (!districtId) return;
 
     try {
       const [policeStations, haatDetails] = await Promise.all([
         getPoliceStationsByDistrictId(districtId),
         getAllHaatDetailsByDistrictID(districtId),
       ]);
+      if(haatDetails?.status === 0){
       setHaatAllDetailsOptions(formatDropdownData(haatDetails?.data || [], 'haat_id', 'haat_name'));
+      }else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching haat details.',
+        }); 
+      }
+      if(policeStations?.status === 0){
       setPoliceStationOptions(formatDropdownData(policeStations?.data || [], 'thana_id', 'thana_name'));
+      }else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching police stations.',
+         
+        }); 
+      }
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
         // Show alert for unauthorized access
         setAlertInfo({
-            visible: true,
-            type: 'Unauthorized',
-            message: 'Your session has expired. Please log in again.',
-            context: 'unauthorized_access',
+          visible: true,
+          type: 'Unauthorized',
+          message: 'Your session has expired. Please log in again.',
+          context: 'unauthorized_access',
+
         });
       } else {
         console.error('Error fetching dependent district data:', error.message);
@@ -1090,19 +727,22 @@ export default function Survey() {
 
   const handlePoliceStationChange = async (selectedKey: any) => {
     const thanaId = String(selectedKey);
+    // Prevent wiping if selecting the same police station
+    if (surveyData.police_station_id === thanaId) return;
+
     updateField('police_station_id', thanaId);
 
     // Clear all dependent fields in surveyData to empty string
-    updateField('mouza_id', ''); 
-    updateField('adsr_name', ''); 
-    updateField('jl_no', ''); 
+    updateField('mouza_id', '');
+    updateField('adsr_name', '');
+    updateField('jl_no', '');
 
     // Clear options for dependent dropdowns
     setMouzaOptions([]);
-    setAdsrOptions([]); 
+    setAdsrOptions([]);
     setJlNOOptions([]); // Clear JL No options here too
 
-    if (!thanaId) return; 
+    if (!thanaId) return;
 
     try {
       const [mouzaList, adsrList, jlNoData] = await Promise.all([
@@ -1110,39 +750,61 @@ export default function Survey() {
         getAdsrByThanaId(thanaId),
         getJlNoByThanaId(thanaId)
       ]);
-
-      console.log("Raw ADSR List from API for thana ID", thanaId, ":", adsrList?.data); 
-      console.log("Raw JL No Data from API for thana ID", thanaId, ":", jlNoData?.data); // Log JL No data
-      
+      if(mouzaList?.status === 0){
       setMouzaOptions(formatDropdownData(mouzaList?.data || [], 'mouza_id', 'mouza_name'));
-      
+      }else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching mouza list.',
+         
+        }); 
+      }
+      if(adsrList?.status === 0){
       const formattedAdsrData = formatDropdownData(adsrList?.data || [], 'adsr_name', 'adsr_name');
-      console.log("Formatted ADSR data for SelectList:", formattedAdsrData);
-      setAdsrOptions(formattedAdsrData); 
-
+    
+      setAdsrOptions(formattedAdsrData);
+      }else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching adsr list.',
+         
+        }); 
+      }
+      if(jlNoData?.status === 0){
       // Format JL No data and set its options
       const formattedJlNOData = formatDropdownData(jlNoData?.data || [], 'jl_no', 'jl_no');
-      console.log("Formatted JL No data for SelectList:", formattedJlNOData);
+        
       setJlNOOptions(formattedJlNOData);
-
-      // If you want to pre-select the first JL No if available:
-      if (formattedJlNOData.length > 0 && !surveyData.jl_no) { // Only pre-select if not already set
-        updateField('jl_no', formattedJlNOData[0].key);
+      }else {
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching JL No list.',
+         
+        }); 
       }
 
+      // REMOVED: The block that auto-selected the first JL No was here.
 
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
         // Show alert for unauthorized access
         setAlertInfo({
-            visible: true,
-            type: 'Unauthorized',
-            message: 'Your session has expired. Please log in again.',
-            context: 'unauthorized_access',
+          visible: true,
+          type: 'Unauthorized',
+          message: 'Your session has expired. Please log in again.',
+          context: 'unauthorized_access',
         });
       } else {
-        console.error('Error fetching mouza, ADSR, or JL No data:', error.message);
+        setAlertInfo({
+          visible: true,
+          type: 'Something went Wrong',
+          message: 'Something went wrong while fetching mouza, ADSR, or JL No data.',
+         
+        }); 
       }
     }
   };
@@ -1162,7 +824,7 @@ export default function Survey() {
     if (
       field.key === 'user_id' ||
       field.key === 'latitude' ||
-      field.key === 'longitude' 
+      field.key === 'longitude'
     )
       return null;
 
@@ -1171,7 +833,7 @@ export default function Survey() {
     if (
       field.dependsOn &&
       surveyData[field.dependsOn.key as keyof SurveyData] !==
-        field.dependsOn.value
+      field.dependsOn.value
     )
       return null;
 
@@ -1188,19 +850,19 @@ export default function Survey() {
 
     let selectedValueForSelectList = '';
     if (value !== null && value !== undefined) {
-        if (field.type === 'dropdown') {
-            selectedValueForSelectList = value === true ? 'true' : value === false ? 'false' : String(value);
-        } else {
-            selectedValueForSelectList = String(value);
-        }
+      if (field.type === 'dropdown') {
+        selectedValueForSelectList = value === true ? 'true' : value === false ? 'false' : String(value);
+      } else {
+        selectedValueForSelectList = String(value);
+      }
     }
 
     // Determine the dynamic key for SelectList components to force remount
     let selectListKey = field.key; // Default key
     if (field.key === 'police_station_id') {
-        selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
+      selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
     } else if (['mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key)) {
-        selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
+      selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
     }
 
 
@@ -1210,7 +872,15 @@ export default function Survey() {
       const data = dropdownDataMap[field.key] || yesNoOptions; // Use dropdownDataMap first, fallback to yesNoOptions if field.type is 'dropdown'
       const saveType = 'key';
 
-      // console.log(`Rendering SelectList for ${field.key}. Data:`, data, `Selected: ${selectedValueForSelectList}`);
+      // MODIFIED: Calculate defaultOption to ensure UI persistence
+      let defaultOptionObj = undefined;
+      if (value !== null && value !== undefined) {
+        const strVal = String(value);
+        const foundItem = data.find(item => item.key === strVal);
+        if (foundItem) {
+          defaultOptionObj = { key: strVal, value: foundItem.value };
+        }
+      }
 
       return (
         <View key={field.key} style={styles.fieldContainer}>
@@ -1236,6 +906,7 @@ export default function Survey() {
               save={saveType}
               search={false}
               selected={selectedValueForSelectList}
+              defaultOption={defaultOptionObj} // Added defaultOption here
               boxStyles={{
                 borderWidth: 0,
                 elevation: 0,
@@ -1293,15 +964,23 @@ export default function Survey() {
         data = mouzaOptions;
       } else if (field.key === 'hat_id') {
         data = haatAllDetailsOptions;
-      } 
+      }
       else if (field.key === 'adsr_name') {
         data = adsrOptions;
       }
-      else if (field.key === 'jl_no') { 
+      else if (field.key === 'jl_no') {
         data = jlNOOptions; // Use the formatted JL No options
       }
-     
-      // console.log(`Rendering dynamic SelectList for ${field.key}. Data:`, data, `Selected: ${selectedValueForSelectList}`);
+
+      // MODIFIED: Calculate defaultOption to ensure UI persistence
+      let defaultOptionObj = undefined;
+      if (value !== null && value !== undefined) {
+        const strVal = String(value);
+        const foundItem = data.find(item => item.key === strVal);
+        if (foundItem) {
+          defaultOptionObj = { key: strVal, value: foundItem.value };
+        }
+      }
 
       return (
         <View key={field.key} style={styles.fieldContainer}>
@@ -1318,6 +997,7 @@ export default function Survey() {
               save="key"
               search={true}
               selected={selectedValueForSelectList}
+              defaultOption={defaultOptionObj} // Added defaultOption here
               boxStyles={{
                 borderWidth: 0,
                 elevation: 0,
@@ -1430,7 +1110,7 @@ export default function Survey() {
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
             {field.label}{' '}
-            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date' ) && <Text style={styles.required}>*</Text>}
+            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date') && <Text style={styles.required}>*</Text>}
           </Text>
           <TouchableOpacity
             style={styles.datePickerButton}
@@ -1459,26 +1139,33 @@ export default function Survey() {
     }
 
     const isEditable = field.key !== 'user_id' && field.key !== 'citizenship';
-                      //  !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date'));
+    //  !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date'));
 
     const isAutoFilledField = ['name', 'guardian_name', 'address', 'pin_code', 'pan'].includes(field.key);
     // NEW: Use mobileAutofillSuccessful to determine if the field should be disabled by autofill
     const isDisabledByAutoFill = isAutoFilledField && mobileAutofillSuccessful;
+    let fieldYPosition = 0;
 
 
     return (
-      <View key={field.key} style={styles.fieldContainer}>
+      <View
+        key={field.key}
+        style={styles.fieldContainer}
+        onLayout={(event) => {
+          fieldYPosition = event.nativeEvent.layout.y;
+        }}
+      >
         <Text style={styles.fieldLabel}>
           {field.label}{' '}
           {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}
-          
+
         </Text>
-        <View style={styles.inputContainer}>
+        <View style={[styles.inputContainer,  (!isEditable || isDisabledByAutoFill) && { backgroundColor: '#F3F4F6' }]}>
           <TextInput
             style={[
               styles.textInput,
               (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline,
-              (!isEditable || isDisabledByAutoFill) && {backgroundColor: '#F3F4F6'}
+             
             ]}
             value={(value as string) || ''}
             placeholder={field.placeholder}
@@ -1491,92 +1178,112 @@ export default function Survey() {
               field.key === 'mobile'
                 ? 10
                 : field.key === 'pan'
-                ? 10
-                : field.key === 'holding_no'
-                ? 10
-                : field.key === 'stall_no'
-                ? 10
-                : field.key === 'previous_license_no'
-                ? 10
-                : field.key === 'jl_no'
-                ? 6
-                : field.key === 'khatian_no'
-                ? 6
-                : field.key === 'plot_no'
-                ? 6
-                : field.key === 'pin_code'
-                ? 6
-                : field.key === 'property_tax_payment_to_year'
-                ? 4
-                : field.key === 'land_valuation_amount'
-                ? 10
-                : field.key === 'area_com_sqft'
-                ? 6
-                : undefined
+                  ? 10
+                  : field.key === 'holding_no'
+                    ? 10
+                    : field.key === 'stall_no'
+                      ? 10
+                      : field.key === 'previous_license_no'
+                        ? 10
+                        : field.key === 'jl_no'
+                          ? 6
+                          : field.key === 'khatian_no'
+                            ? 6
+                            : field.key === 'plot_no'
+                              ? 6
+                              : field.key === 'pin_code'
+                                ? 6
+                                : field.key === 'property_tax_payment_to_year'
+                                  ? 4
+                                  : field.key === 'land_valuation_amount'
+                                    ? 10
+                                    : field.key === 'area_com_sqft'
+                                      ? 6
+                                      : field.key === 'occupy_from_year'
+                                        ? 4
+                                        : undefined
             }
             autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
             multiline={field.multiline || field.key === 'land_transfer_explanation'}
             numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
+            onFocus={() => {
+              if (fieldYPosition > 0) {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollTo({
+                    y: fieldYPosition - 100,
+                    animated: true,
+                  });
+                }, 100);
+              }
+            }}
             onChangeText={(text) => {
-                updateField(field.key, text);
-                // Trigger API call when 10 digits are entered for mobile
-                if (field.key === 'mobile' && text.length === 10) {
-                    getUserDetailsByPhoneNumber(text)
-                        .then(response => {
-                            if (response.data) {
-                                setMobileAutofillSuccessful(true); // Autofill successful
-                                // Update fields only if they are currently empty or not explicitly set by the user
-                                if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
-                                if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
-                                if (!surveyData.address) updateField('address', response.data.address || '');
-                                if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
-                                if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
-                                setAlertInfo({
-                                    visible: true,
-                                    type: 'Autofill Successful',
-                                    message: 'User details autofilled!',
-                                    context: 'autofill_success',
-                                });
-                            } else {
-                                setMobileAutofillSuccessful(false); // No data found, allow manual edit
-                                // If no data found, explicitly clear fields so they become editable
-                                updateField('name', '');
-                                updateField('guardian_name', '');
-                                updateField('address', '');
-                                updateField('pin_code', '');
-                                updateField('pan', '');
-                                setAlertInfo({
-                                    visible: true,
-                                    type: 'User Not Found',
-                                    message: 'No existing user found. Please fill details manually.',
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching user details:', error);
-                            setMobileAutofillSuccessful(false); // API call failed, allow manual edit
-                            // If API call fails, explicitly clear fields so they become editable
-                            updateField('name', '');
-                            updateField('guardian_name', '');
-                            updateField('address', '');
-                            updateField('pin_code', '');
-                            updateField('pan', '');
-                            setAlertInfo({
-                                visible: true,
-                                type: 'User Details Unavailable',
-                                message: 'Error fetching user details. Please fill manually.',
-                            });
-                        });
-                } else if (field.key === 'mobile' && text.length < 10) {
-                    // If mobile number is incomplete or cleared by user, allow manual editing
-                    setMobileAutofillSuccessful(false); // Reset the flag
-                    // Optionally clear related autofilled fields immediately as mobile is no longer complete
+              updateField(field.key, text);
+              // Trigger API call when 10 digits are entered for mobile
+              if (field.key === 'mobile' && text.length === 10) {
+                getUserDetailsByPhoneNumber(text)
+                  .then(response => {
+                    if(response?.status !== 0){
+                      setAlertInfo({
+                        visible: true,
+                        type: 'Something went Wrong',
+                        message: 'Something went wrong.',
+                       
+                      }); 
+                    } 
+                    if (response?.data && response?.status === 0) {
+                      setMobileAutofillSuccessful(true); // Autofill successful
+                      // Update fields only if they are currently empty or not explicitly set by the user
+                      if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
+                      if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
+                      if (!surveyData.address) updateField('address', response.data.address || '');
+                      if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
+                      if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
+                      setAlertInfo({
+                        visible: true,
+                        type: 'Autofill Successful',
+                        message: 'User details autofilled!',
+                        context: 'autofill_success',
+                      });
+                    } else {
+                      setMobileAutofillSuccessful(false); // No data found, allow manual edit
+                      // If no data found, explicitly clear fields so they become editable
+                      updateField('name', '');
+                      updateField('guardian_name', '');
+                      updateField('address', '');
+                      updateField('pin_code', '');
+                      updateField('pan', '');
+                      setAlertInfo({
+                        visible: true,
+                        type: 'User Not Exist',
+                        message: 'No existing user found. Please fill details manually.',
+                      });
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error fetching user details:', error);
+                    setMobileAutofillSuccessful(false); // API call failed, allow manual edit
+                    // If API call fails, explicitly clear fields so they become editable
                     updateField('name', '');
                     updateField('guardian_name', '');
                     updateField('address', '');
                     updateField('pin_code', '');
                     updateField('pan', '');
-                }
+                    setAlertInfo({
+                      visible: true,
+                      type: 'User Details Unavailable',
+                      message: 'Error fetching user details. Please fill manually.',
+                    });
+                  });
+              } else if (field.key === 'mobile' && text.length < 10) {
+                // If mobile number is incomplete or cleared by user, allow manual editing
+                setMobileAutofillSuccessful(false); // Reset the flag
+                // Optionally clear related autofilled fields immediately as mobile is no longer complete
+                updateField('name', '');
+                updateField('guardian_name', '');
+                updateField('address', '');
+                updateField('pin_code', '');
+                updateField('pan', '');
+              }
             }}
           />
         </View>
@@ -1631,97 +1338,112 @@ export default function Survey() {
   const StepIcon = currentStepData.icon;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 
-        1. CustomAlert is still positioned absolutely/modally, 
-           so it stays outside the main layout flow.
-      */}
-      {alertInfo.visible && (
-        <CustomAlert
-          type={alertInfo.type}
-          message={alertInfo.message}
-          onConfirm={handleAlertConfirm}
-        />
-      )}
-
-      {/* 
-        2. Static Header (fixed at top) is moved OUTSIDE KeyboardAvoidingView
-      */}
-      <LinearGradient
-        colors={[currentStepData.color, currentStepData.color + '90']}
-        style={styles.header}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.headerLeft}>
-            <View
-              style={[
-                styles.headerIcon,
-                { backgroundColor: currentStepData.bgColor },
-              ]}
-            >
-              <StepIcon size={24} color={currentStepData.color} />
+    <View style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+       
+        {alertInfo.visible && (
+          <CustomAlert
+            type={alertInfo.type}
+            message={alertInfo.message}
+            onConfirm={handleAlertConfirm}
+            // onCancel={() => { }}
+          />
+        )}
+        <LinearGradient
+          colors={[currentStepData.color, currentStepData.color + '90']}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View
+                style={[
+                  styles.headerIcon,
+                  { backgroundColor: currentStepData.bgColor },
+                ]}
+              >
+                <StepIcon size={24} color={currentStepData.color} />
+              </View>
+              <View style={styles.headerText}>
+                <Text style={styles.headerTitle}>{currentStepData.title}</Text>
+                <Text style={styles.headerSubtitle}>
+                  {currentStepData.description}
+                </Text>
+              </View>
             </View>
-            <View style={styles.headerText}>
-              <Text style={styles.headerTitle}>{currentStepData.title}</Text>
-              <Text style={styles.headerSubtitle}>
-                {currentStepData.description}
+            <View style={styles.stepCounter}>
+              <Text style={styles.stepCounterText}>
+                {currentStep + 1}/{steps.length}
               </Text>
             </View>
           </View>
-          <View style={styles.stepCounter}>
-            <Text style={styles.stepCounterText}>
-              {currentStep + 1}/{steps.length}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${((currentStep + 1) / steps.length) * 100}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressText}>
+              {Math.round(((currentStep + 1) / steps.length) * 100)}% Complete
             </Text>
           </View>
-        </View>
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${((currentStep + 1) / steps.length) * 100}%` },
-              ]}
-            />
-          </View>
-          <Text style={styles.progressText}>
-            {Math.round(((currentStep + 1) / steps.length) * 100)}% Complete
-          </Text>
-        </View>
-      </LinearGradient>
+        </LinearGradient>
 
-      {/* 3. Step Indicator is also moved OUTSIDE KeyboardAvoidingView */}
-      <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
+        {/* 3. Step Indicator is also moved OUTSIDE KeyboardAvoidingView */}
+        <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
+
+      
+        {Platform.OS === 'ios' ? (
+          <KeyboardAvoidingView
+            behavior="padding"
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={0}
+          >
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.formContainer}
+              contentContainerStyle={{
+                paddingBottom: 150
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.formContent}>
+                {currentStepData.fields.map(renderField)}
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        ) : (
+          <KeyboardAvoidingView
+            behavior="padding"
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={0}
+          >
+          <View style={{ flex: 1 }}>
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.formContainer}
+              contentContainerStyle={{
+                paddingBottom: keyboardVisible ? 40 : 110
+              }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.formContent}>
+                {currentStepData.fields.map(renderField)}
+              </View>
+            </ScrollView>
+          </View>
+          </KeyboardAvoidingView>
+        )}
+      </SafeAreaView>
+      
 
       {/* 
-        4. KeyboardAvoidingView now only wraps the scrollable content.
-           It has flex: 1 to take up the space between the static header/indicator and the footer.
+        5. Button Container (footer) OUTSIDE SafeAreaView 
+           to keep it fixed at the bottom, behind keyboard.
       */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }} // Crucial: takes all remaining vertical space
-        keyboardVerticalOffset={0} // Can use 0 or remove entirely if behavior="padding" is fine
-      >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.formContainer}
-          contentContainerStyle={{ 
-            // Add extra bottom padding to ensure the last field is not hidden 
-            // behind the fixed buttonContainer when scrolling
-            paddingBottom: 20 
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.formContent}>
-            {currentStepData.fields.map(renderField)}
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* 
-        5. Button Container (footer) is moved OUTSIDE KeyboardAvoidingView 
-           to keep it fixed at the bottom.
-      */}
-      <View style={styles.buttonContainer}>
+      <View style={[styles.buttonContainer]}>
         {currentStep > 0 && (
           <TouchableOpacity
             style={[
@@ -1762,10 +1484,10 @@ export default function Survey() {
               {isSaving
                 ? 'Saving...'
                 : loadingImage
-                ? 'Processing...'
-                : currentStep === steps.length - 1
-                ? 'Submit Survey'
-                : 'Continue'}
+                  ? 'Processing...'
+                  : currentStep === steps.length - 1
+                    ? 'Submit Survey'
+                    : 'Continue'}
             </Text>
             {currentStep < steps.length - 1 && (
               <ChevronRight size={20} color="#ffffff" />
@@ -1773,7 +1495,7 @@ export default function Survey() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -1905,7 +1627,7 @@ const styles = StyleSheet.create({
   formContainer: {
     flex: 1,
     paddingTop: 20,
-    
+
   },
   formContent: {
     paddingHorizontal: 20,
@@ -1960,14 +1682,16 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   buttonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 20,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    marginBottom: -50,
-    
   },
   dialogbox: {
     justifyContent: 'center',
@@ -1994,7 +1718,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    
+
 
   },
   nextButtonFull: {

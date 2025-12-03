@@ -27,9 +27,7 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
-import { Platform } from 'react-native';
-import * as Location from 'expo-location';
-import Toast from 'react-native-toast-message';
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getDashboardCountBySurveyUserID,
@@ -109,8 +107,18 @@ export default function Dashboard() {
           const stallData = await getNumberOfStallsPerMarketID(
             userDetails.UserID
           );
-          setDashboardData(Data?.data);
-          setStallData(stallData?.data);
+          if(Data?.status === 0){
+            setDashboardData(Data?.data);
+          }else {
+            alert("Something went wrong while fetching dashboard data.");
+            setDashboardData([]);
+          }
+          if(stallData?.status === 0){
+            setStallData(stallData?.data);
+          }else {
+            alert("Something went wrong while fetching dashboard data.");
+            setStallData([]);
+          }
         } else {
           setDashboardData([]);
           setStallData([]);
@@ -124,9 +132,18 @@ export default function Dashboard() {
               message: 'Your session has expired. Please log in again.',
               context: 'unauthorized_access',
           });
+          return;
       }
-        setDashboardData([]);
+      else{
+        setAlertInfo({
+          visible: true,
+          type: 'Something went wrong',
+          message: 'Something went wrong while fetching dashboard data.',
+          context:'Something_went_wrong',
+        });
+         setDashboardData([]);
         setStallData([]);
+      }
       }
     }
     load();
