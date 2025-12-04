@@ -455,3 +455,8 @@ export const numericFields = [
     'longitude',
     'land_valuation_amount',
   ];
+
+ export const getMaxLength = (key: string) => {
+  const limits: any = { mobile: 10, pan: 10, holding_no: 10, stall_no: 10, previous_license_no: 10, jl_no: 6, khatian_no: 6, plot_no: 6, pin_code: 6, area_com_sqft: 6, property_tax_payment_to_year: 4, occupy_from_year: 4, land_valuation_amount: 10 };
+  return limits[key];
+};

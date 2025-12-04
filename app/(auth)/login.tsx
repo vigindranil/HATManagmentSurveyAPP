@@ -67,7 +67,6 @@ export default function Login() {
       ]).start();
       return;
     }
-
     setIsLoading(true);
     // Animate button press
     Animated.timing(buttonScale, {
@@ -101,7 +100,7 @@ export default function Login() {
           duration: 150,
           useNativeDriver: true,
         }).start();
-        setError(userData?.message);
+        setError('Please try again later.');
       }
     } catch (err) {
       setError('Please try again.');

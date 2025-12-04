@@ -44,7 +44,7 @@ import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
-import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields } from '../../constant/survey_constant';
+import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength } from '../../constant/survey_constant';
 
 
 type ImageFieldType = {
@@ -126,13 +126,9 @@ export default function Survey() {
   const [policeStationOptions, setPoliceStationOptions] = useState([]);
   const [mouzaOptions, setMouzaOptions] = useState([]);
   const [user, setUser] = useState<any>(null);
-
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
-
   const [adsrOptions, setAdsrOptions] = useState([]);
-  const [jlNOOptions, setJlNOOptions] = useState([]); // jlNOOptions now holds dropdown options for JL No
-
-  // NEW STATE: To track if autofill was successful for mobile number
+  const [jlNOOptions, setJlNOOptions] = useState([]); 
   const [mobileAutofillSuccessful, setMobileAutofillSuccessful] = useState(false);
    const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -1174,35 +1170,7 @@ export default function Survey() {
             keyboardType={
               numericFields.includes(field.key) ? 'numeric' : 'default'
             }
-            maxLength={
-              field.key === 'mobile'
-                ? 10
-                : field.key === 'pan'
-                  ? 10
-                  : field.key === 'holding_no'
-                    ? 10
-                    : field.key === 'stall_no'
-                      ? 10
-                      : field.key === 'previous_license_no'
-                        ? 10
-                        : field.key === 'jl_no'
-                          ? 6
-                          : field.key === 'khatian_no'
-                            ? 6
-                            : field.key === 'plot_no'
-                              ? 6
-                              : field.key === 'pin_code'
-                                ? 6
-                                : field.key === 'property_tax_payment_to_year'
-                                  ? 4
-                                  : field.key === 'land_valuation_amount'
-                                    ? 10
-                                    : field.key === 'area_com_sqft'
-                                      ? 6
-                                      : field.key === 'occupy_from_year'
-                                        ? 4
-                                        : undefined
-            }
+            maxLength={getMaxLength(field.key)}
             autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
             multiline={field.multiline || field.key === 'land_transfer_explanation'}
             numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
