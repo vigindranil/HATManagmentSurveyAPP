@@ -153,6 +153,8 @@ export default function Survey() {
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
   const { setNeedsRefresh } = useDashboard();
 
+  console.log("surveyData",surveyData);
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -204,7 +206,6 @@ export default function Survey() {
       try {
         const districtList = await getAllDistrictList();
        if(districtList?.status === 0){
-       
         setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
        }
        else {
@@ -212,7 +213,6 @@ export default function Survey() {
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching districts.',
-         
         }); 
        }
       } catch (err) {
@@ -264,7 +264,7 @@ export default function Survey() {
     });
   };
 
-  const handleStallImagePick = async (fieldKey: string) => {
+  const processImage = async (fieldKey: string, location : boolean) => {
     Keyboard.dismiss();
     isCameraOpenRef.current = true;
     Alert.alert(
@@ -286,6 +286,8 @@ export default function Survey() {
 
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
+                const compressedUri = await compressImageUri(asset.uri);
+                if(location){
                 let latitude = asset.exif?.GPSLatitude;
                 let longitude = asset.exif?.GPSLongitude;
 
@@ -300,12 +302,11 @@ export default function Survey() {
                   latitude = loc.coords.latitude;
                   longitude = loc.coords.longitude;
                 }
-
-                const compressedUri = await compressImageUri(asset.uri);
-                updateField(fieldKey, { uri: compressedUri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
               }
+              updateField(fieldKey, { uri: compressedUri });
+            }
             } catch (err) {
               console.error('Camera pick failed:', err);
             } finally {
@@ -330,6 +331,8 @@ export default function Survey() {
 
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
+                const compressedUri = await compressImageUri(asset.uri);
+                if(Location){
                 let latitude = asset.exif?.GPSLatitude;
                 let longitude = asset.exif?.GPSLongitude;
 
@@ -344,15 +347,11 @@ export default function Survey() {
                   latitude = loc.coords.latitude;
                   longitude = loc.coords.longitude;
                 }
-
-                const compressedUri = await compressImageUri(asset.uri);
-
-                console.log(compressedUri);
-
-                updateField(fieldKey, { uri: compressedUri });
                 updateField('latitude', String(latitude));
                 updateField('longitude', String(longitude));
               }
+              updateField(fieldKey, { uri: compressedUri });
+            }
             } catch (err) {
               console.error('Gallery pick failed:', err);
             } finally {
@@ -366,66 +365,7 @@ export default function Survey() {
     );
   };
 
-  const handleImagePick = async (fieldKey: string) => {
-    Keyboard.dismiss();
-    Alert.alert(
-      '📸 Select Image Source',
-      'How would you like to add or change the image?',
-      [
-        {
-          text: '📷 Camera',
-          onPress: async () => {
-            isCameraOpenRef.current = true;
-            try {
-              setLoadingImage(fieldKey);
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ['images'],
-                allowsEditing: false,
-                aspect: [4, 3],
-                quality: 0.7,
-              });
 
-              if (!result.canceled && result.assets) {
-                const compressedUri = await compressImageUri(result.assets[0].uri);
-                updateField(fieldKey, { uri: compressedUri });
-              }
-            } catch (err) {
-              console.error('Camera pick failed:', err);
-            } finally {
-              setLoadingImage(null);
-              isCameraOpenRef.current = false;
-            }
-          },
-        },
-        {
-          text: '🖼️ Device Gallery',
-          onPress: async () => {
-            isCameraOpenRef.current = true;
-            try {
-              setLoadingImage(fieldKey);
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ['images'],
-                allowsEditing: false,
-                aspect: [4, 3],
-                quality: 0.7,
-              });
-
-              if (!result.canceled && result.assets) {
-                const compressedUri = await compressImageUri(result.assets[0].uri);
-                updateField(fieldKey, { uri: compressedUri });
-              }
-            } catch (err) {
-              console.error('Gallery pick failed:', err);
-            } finally {
-              setLoadingImage(null);
-              isCameraOpenRef.current = false;
-            }
-          },
-        },
-        { text: 'Cancel', style: 'cancel', onPress: () => { isCameraOpenRef.current = false; } },
-      ]
-    );
-  };
 
   const validateStep = () => {
     const currentStepData = steps[currentStep];
@@ -521,10 +461,6 @@ export default function Survey() {
     return true;
   };
 
-  
-
-  
-
   const nextStep = async () => {
     if (validateStep()) {
       if (currentStep < steps.length - 1) {
@@ -556,10 +492,7 @@ export default function Survey() {
             const statusChanged = currentStatus !== lastStatus;
 
             if (statusChanged) {
-              // Status HAS CHANGED since the last "Continue".
-              // This implies the user wants to switch contexts (e.g. Existing -> Transfer).
-              // We must clear shared fields to satisfy the "Clear on Change" requirement.
-
+             
               if (currentStatus === '1') { // New
                 // Wipe everything
                 transferOnlyFields.forEach(k => delete newData[k]);
@@ -575,9 +508,7 @@ export default function Survey() {
                 }
               }
             } else {
-              // Status matches what was previously confirmed.
-              // This happens if user goes Back -> Changes selection -> Changes BACK to original -> Clicks Continue.
-              // In this case, we PRESERVE the data.
+              
 
               if (currentStatus === '1') { // New - always clear just to be safe
                 transferOnlyFields.forEach(k => delete newData[k]);
@@ -781,9 +712,6 @@ export default function Survey() {
          
         }); 
       }
-
-      // REMOVED: The block that auto-selected the first JL No was here.
-
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
@@ -1034,7 +962,7 @@ export default function Survey() {
           </Text>
           <TouchableOpacity
             style={styles.imagePickerButton}
-            onPress={() => handleImagePick(field.key)}
+            onPress={() => processImage(field.key, false)}
           >
             {loadingImage === field.key ? (
               <View style={styles.imagePreviewContainer}>
@@ -1074,7 +1002,7 @@ export default function Survey() {
           </Text>
           <TouchableOpacity
             style={styles.imagePickerButton}
-            onPress={() => handleStallImagePick(field.key)}
+            onPress={() => processImage(field.key, true)}
           >
             {loadingImage === field.key ? (
               <View style={styles.imagePreviewContainer}>
