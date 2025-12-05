@@ -22,6 +22,7 @@ import {
   Calendar,
   Target,
   Store,
+  ClipboardList
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -309,15 +310,12 @@ export default function Dashboard() {
           <View style={styles.recentSection}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Recent Surveys</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
             </View>
             
             {stallData && stallData.length > 0 ? (
               stallData.map((survey: any) => {
                 const statusDetails = getStatusDetails(survey.status);
-                const StatusIcon = statusDetails.icon;
+               
 
                 return (
                   <TouchableOpacity
@@ -340,21 +338,35 @@ export default function Dashboard() {
                         ]}
                       >
                         {/* --- ICON is now always blue --- */}
-                        <Store size={22} color="#2563EB" />
+                        <ClipboardList size={22} color="#2563EB" />
                       </View>
                       <View style={styles.surveyInfo}>
+                        
                         <Text style={styles.surveyLocation} numberOfLines={1}>
                           {survey.market_name}
                         </Text>
+                        
+                        
                         <View style={styles.surveyMeta}>
                           <View style={styles.metaItem}>
-                            <Users size={14} color={statusDetails.color} />
-                            <Text style={styles.stallCount}>
+                            <Store size={14} color={statusDetails.color} />
+                            {/* <Text style={styles.stallCount}>
                               <Text style={{ fontWeight: '600' }}>
                                 {survey.number_of_stalls}
                               </Text>{' '}
                               stalls
-                            </Text>
+                            </Text> */}
+                            <View style={[styles.activebox,  {backgroundColor: '#83b910d4'}]}>
+                              <Text style={{ fontWeight: '600',fontSize:11}}>
+                               {`Active : ${50}`}
+                              </Text>
+                            </View>
+
+                            <View style={[styles.inactivebox, {backgroundColor: '#ef4444d0'}]}>
+                              <Text style={{ fontWeight: '600',fontSize:11 }}>
+                               {`Inactive : ${50}`}
+                              </Text>
+                            </View>
                           </View>
                           <View
                             style={[
@@ -590,6 +602,7 @@ const styles = StyleSheet.create({
   surveyInfo: {
     flex: 1,
   },
+  
   surveyLocation: {
     fontSize: 17,
     fontWeight: 'bold',
@@ -604,12 +617,28 @@ const styles = StyleSheet.create({
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    
+  },
+  activebox: {
+    padding: 5,
+    borderRadius: 10,
+    textAlign: 'center',
+    marginLeft: 5,
+    
+  },
+  inactivebox: {
+    padding: 5,
+    borderRadius: 10,
+    textAlign: 'center',
+    marginLeft: 5,
+    
   },
   stallCount: {
     fontSize: 13,
     color: '#4B5563',
     fontWeight: '400',
     marginLeft: 6,
+    
   },
   surveyStatus: {
     flexDirection: 'row',

@@ -44,7 +44,7 @@ import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
-import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength } from '../../constant/survey_constant';
+import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength,statusType } from '../../constant/survey_constant';
 
 
 type ImageFieldType = {
@@ -65,6 +65,7 @@ interface SurveyData {
   mouza_id: string;
   stall_no: string;
   holding_no: string;
+  statusType: string;
   jl_no: string;
   khatian_no: string;
   plot_no: string;
@@ -85,16 +86,20 @@ interface SurveyData {
   citizenship: string;
   pin_code: string;
   documentTypes: string;
+  documentNumber: string;
   document_image: string;
   pan: string;
   pan_image: string;
   previous_license_no: string;
+  license_image: string;
   license_expiry_date: string;
   property_tax_payment_to_year: string;
   land_transfer_explanation: string;
   occupy: boolean;
   occupy_from_year: string;
   present_occupier_name: string;
+  block_municipality_id: string;
+  ward_id: string;
   occupier_guardian_name: string;
   residential_certificate_attached: string;
   trade_license_attached: string;
@@ -136,6 +141,8 @@ export default function Survey() {
   const [showPicker, setShowPicker] = useState(false);
   const [loadingImage, setLoadingImage] = useState<string | null>(null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [blockMunicipalityOptions, setBlockMunicipalityOptions] = useState([]);
+  const [wardOptions, setWardOptions] = useState([]);
 
   // NEW REF: Tracks the status/type that was active the last time the user successfully clicked "Next" on Step 0.
   const lastConfirmedStep0State = useRef<{ licenseType: string | null, applicationStatus: string | null }>({
@@ -365,8 +372,6 @@ export default function Survey() {
     );
   };
 
-
-
   const validateStep = () => {
     const currentStepData = steps[currentStep];
     const statusMap: { [key: string]: string } = {
@@ -382,7 +387,7 @@ export default function Survey() {
         continue;
       if (field.key === 'stall_no' && surveyData.licenseType !== '2') continue;
 
-      if (currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === 'property_tax_payment_to_year')) {
+      if (currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === 'property_tax_payment_to_year' || field.key === 'license_image')) {
         continue;
       }
 
@@ -396,6 +401,16 @@ export default function Survey() {
         }
       }
 
+      let fieldLabel = field.label; // Default to 'Document Number'
+
+      if ((field.key === 'documentNumber' || field.key === 'document_image') && surveyData.documentTypes) {
+        const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
+        if (selectedDoc) {
+          const suffix = field.key === 'document_image' ? ' Image' : ' Number';
+          fieldLabel = `${selectedDoc.value}${suffix}`; // Becomes 'Aadhar Number' or 'Voter ID Number'
+        }
+      }
+
       const fieldValue = surveyData[field.key as keyof SurveyData] as string;
       if (
         fieldValue === null ||
@@ -405,9 +420,43 @@ export default function Survey() {
         setAlertInfo({
           visible: true,
           type: 'Missing Information',
-          message: `${field.label} is required`,
+          message: `${fieldLabel} is required`,
         });
         return false;
+      }
+
+
+       if (field.key === 'documentNumber') {
+        const val = fieldValue ? fieldValue.trim() : '';
+
+        // 1. Aadhar Validation (Type '1')
+        // Rule: Must be exactly 12 numeric digits
+        if (surveyData.documentTypes === '1') {
+          const aadharRegex = /^[0-9]{12}$/;
+          if (!aadharRegex.test(val)) {
+            setAlertInfo({
+              visible: true,
+              type: 'Invalid Format',
+              message: 'Invalid Aadhar Number. It must be exactly 12 digits.',
+            });
+            return false;
+          }
+        }
+
+        // 2. Voter ID Validation (Type '2')
+        // Rule: Standard EPIC format is 3 Letters + 7 Digits (e.g., ABC1234567)
+        if (surveyData.documentTypes === '2') {
+          // Check for 3 letters followed by 7 digits
+          const voterRegex = /^[A-Za-z]{3}[0-9]{7}$/;
+          if (!voterRegex.test(val)) {
+            setAlertInfo({
+              visible: true,
+              type: 'Invalid Format',
+              message: 'Invalid Voter ID. Format should be 3 letters followed by 7 digits (e.g., ABC1234567).',
+            });
+            return false;
+          }
+        }
       }
 
       if (field.key === 'pan') {
@@ -421,6 +470,7 @@ export default function Survey() {
           return false;
         }
       }
+
 
       if (field.key === 'land_valuation_amount') {
 
@@ -442,8 +492,6 @@ export default function Survey() {
           });
           return false;
         }
-
-
       }
 
       if (field.key === 'mobile') {
@@ -486,7 +534,7 @@ export default function Survey() {
               'affidavit_attached', 'warision_certificate_attached', 'death_certificate_attached', 'noc_legal_heirs_attached'
             ];
             const sharedFields = [
-              'previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year'
+              'previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year', 'license_image'
             ];
 
             const statusChanged = currentStatus !== lastStatus;
@@ -501,15 +549,12 @@ export default function Survey() {
                 // Existing (2) or Transfer (3)
                 // User switched status. Wipe the shared fields to force fresh entry.
                 sharedFields.forEach(k => delete newData[k]);
-
                 // If not Transfer, wipe transfer fields
                 if (currentStatus !== '3') {
                   transferOnlyFields.forEach(k => delete newData[k]);
                 }
               }
             } else {
-              
-
               if (currentStatus === '1') { // New - always clear just to be safe
                 transferOnlyFields.forEach(k => delete newData[k]);
                 sharedFields.forEach(k => delete newData[k]);
@@ -535,7 +580,7 @@ export default function Survey() {
         setIsSaving(true);
         try {
           const response = await saveSurveyOnline(surveyData);
-          const messages =
+          const messages = 
             response.status === 0
               ? `Survey submitted successfully! Your application number is ${response?.data?.applicationNumber}`
               : 'Survey submission failed. Please try again.';
@@ -550,12 +595,11 @@ export default function Survey() {
             setNeedsRefresh(true);
             setMobileAutofillSuccessful(false);
           } else {
-
             setAlertInfo({
               visible: true,
               type: 'Something went Wrong',
               message: messages,
-            });
+            });                        
           }
         } catch (err) {
           const error = err as any;
@@ -601,6 +645,8 @@ export default function Survey() {
     updateField('hat_id', '');
     updateField('adsr_name', '');
     updateField('jl_no', '');
+    updateField('block_municipality_id', '');
+    updateField('ward_id', '');
 
     // Clear options for dependent dropdowns
     setPoliceStationOptions([]);
@@ -608,6 +654,8 @@ export default function Survey() {
     setHaatAllDetailsOptions([]);
     setAdsrOptions([]);
     setJlNOOptions([]); // Clear JL No options here too
+    setBlockMunicipalityOptions([]);
+    setWardOptions([]);
 
     if (!districtId) return;
 
@@ -651,6 +699,8 @@ export default function Survey() {
       }
     }
   };
+
+  
 
   const handlePoliceStationChange = async (selectedKey: any) => {
     const thanaId = String(selectedKey);
@@ -761,6 +811,32 @@ export default function Survey() {
     )
       return null;
 
+
+      if ((field.key === 'document_image' || field.key === 'documentNumber') && !surveyData.documentTypes) {
+      return null;
+    }
+
+    
+
+    let displayLabel = field.label;
+    
+    if (field.key === 'document_image' && surveyData.documentTypes) {
+      // Find the label (e.g., 'Aadhar') based on the key selected
+      const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
+      if (selectedDoc) {
+        displayLabel = `${selectedDoc.value} Image`; // e.g., "Aadhar Image"
+      }
+    }
+
+    if (field.key === 'documentNumber' && surveyData.documentTypes) {
+      // Find the label (e.g., 'Aadhar') based on the key selected
+      const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
+      if (selectedDoc) {
+        displayLabel = `${selectedDoc.value} Number`; // e.g., "Aadhar Image"
+      }
+    }
+
+
     const value = surveyData[field.key as keyof SurveyData];
 
     const dropdownDataMap: Record<string, any[]> = {
@@ -769,6 +845,7 @@ export default function Survey() {
       applicationFor,
       usesType,
       documentTypes,
+      statusType,
       transfer_relationship: transferRelationshipOptions,
     };
 
@@ -792,7 +869,7 @@ export default function Survey() {
 
     // Render standard dropdowns (not dynamically fetched based on other fields)
     // This condition checks if the field is in dropdownDataMap AND is NOT one of the dependent dropdowns
-    if (dropdownDataMap[field.key] || (field.type === 'dropdown' && !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key))) {
+    if (dropdownDataMap[field.key] || (field.type === 'dropdown' && !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id','ward_id'].includes(field.key))) {
       const data = dropdownDataMap[field.key] || yesNoOptions; // Use dropdownDataMap first, fallback to yesNoOptions if field.type is 'dropdown'
       const saveType = 'key';
 
@@ -806,13 +883,33 @@ export default function Survey() {
         }
       }
 
+      let lockedLabel = null; // If this is set, the field becomes read-only
+      
+      // 1. Lock Usage Type to 'Commercial' if License Type is 'Stall' (2)
+      if (field.key === 'usesType' && surveyData.licenseType === '2') {
+        lockedLabel = 'Commercial';
+      }
+
+      // 2. Lock Application For to 'Self' if Status is 'New' (1) or 'Existing' (2)
+      if (field.key === 'applicationFor' && (surveyData.applicationStatus === '1' || surveyData.applicationStatus === '2')) {
+        lockedLabel = 'Self';
+      }
+
+
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
             {field.label}{' '}
-            {field.required && !(currentStatusString === 'transfer' && ['previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year'].includes(field.key)) && <Text style={styles.required}>*</Text>}
+            {field.required && !(currentStatusString === 'transfer' && ['previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year',].includes(field.key)) && <Text style={styles.required}>*</Text>}
           </Text>
           <View style={styles.inputContainer}>
+             {lockedLabel ? (            
+              <TextInput 
+                style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5',borderRadius: 10 }]} // Grey text
+                value={lockedLabel} // Hardcoded display value
+                editable={false}   // Prevent editing
+              />
+            ):(
             <SelectList
               key={selectListKey} // Apply dynamic key
               setSelected={(val: any) => {
@@ -820,10 +917,47 @@ export default function Survey() {
                 if (typeof val === 'object' && val !== null && 'key' in val) {
                   valueToStore = val.key;
                 }
-                updateField(
-                  field.key,
-                  valueToStore === 'true' ? true : valueToStore === 'false' ? false : String(valueToStore)
-                );
+                const finalValue = valueToStore === 'true' ? true : valueToStore === 'false' ? false : String(valueToStore);
+
+                // --- 2. CLEAR IMAGE IF DOCUMENT TYPE CHANGES (NEW) ---
+                if (field.key === 'documentTypes') {
+                   // If the value is actually changing, clear the image field
+                   if (surveyData.documentTypes !== finalValue) {
+                     updateField('document_image', null); 
+                   }
+                }
+
+                if (field.key === 'documentTypes') {
+                 if (surveyData.documentTypes !== finalValue) {
+                     updateField('documentNumber', null); 
+                   }
+                }
+
+
+
+                if (field.key === 'licenseType') {
+                    // If switching to Stall (2)
+                    if (finalValue === '2') {
+                        updateField('usesType', '1'); // Force 'Commercial'
+                    } 
+                    // If switching to Holding (1) (or anything else)
+                    else {
+                        // Check if we need to clear (only if it was previously Stall/Commercial)
+                        // Or just strictly clear it every time they change license type to be safe:
+                        updateField('usesType', ''); 
+                    }
+                  }
+
+                   if (field.key === 'applicationStatus') {
+                    if (finalValue === '1' || finalValue === '2') {
+                        // If New (1) or Existing (2) -> Force 'Self' (1)
+                        updateField('applicationFor', '1');
+                    } else {
+                        // If Transfer (3) -> Clear so user can choose Self/Family/Others
+                        updateField('applicationFor', '');
+                    }
+                  }
+                updateField(field.key, finalValue);
               }}
               placeholder={field.placeholder}
               data={data}
@@ -852,7 +986,7 @@ export default function Survey() {
                 marginHorizontal: 10,
               }}
               inputStyles={{ color: '#000000', fontSize: 16 }}
-            />
+            />)}
           </View>
         </View>
       );
@@ -860,7 +994,7 @@ export default function Survey() {
 
     // Render dependent dropdowns (District, Police Station, Mouza, Hat, ADSR, JL No)
     if (
-      ['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(
+      ['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', `block_municipality_id`,`ward_id`].includes(
         field.key
       )
     ) {
@@ -957,8 +1091,8 @@ export default function Survey() {
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
-            {field.label}{' '}
-            {field.required && <Text style={styles.required}>*</Text>}
+            {displayLabel}{' '} 
+            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_image') && <Text style={styles.required}>*</Text>}
           </Text>
           <TouchableOpacity
             style={styles.imagePickerButton}
@@ -1070,6 +1204,20 @@ export default function Survey() {
     const isDisabledByAutoFill = isAutoFilledField && mobileAutofillSuccessful;
     let fieldYPosition = 0;
 
+     let fieldMaxLength = getMaxLength(field.key);
+    
+    if (field.key === 'documentNumber') {
+      if (surveyData.documentTypes === '1') {
+        fieldMaxLength = 12; // Aadhar is exactly 12 digits
+      } else {
+        fieldMaxLength = 10; // Voter ID can be longer/alphanumeric
+      }
+    }
+
+     const isNumericKeyboard = 
+      numericFields.includes(field.key) || 
+      (field.key === 'documentNumber' && surveyData.documentTypes === '1'); // '1' is Aadhar
+
 
     return (
       <View
@@ -1080,7 +1228,7 @@ export default function Survey() {
         }}
       >
         <Text style={styles.fieldLabel}>
-          {field.label}{' '}
+          {displayLabel}{' '}
           {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}
 
         </Text>
@@ -1095,10 +1243,8 @@ export default function Survey() {
             placeholder={field.placeholder}
             editable={isEditable && !isDisabledByAutoFill} // This is the crucial line for enabling/disabling
             placeholderTextColor="#9CA3AF"
-            keyboardType={
-              numericFields.includes(field.key) ? 'numeric' : 'default'
-            }
-            maxLength={getMaxLength(field.key)}
+             keyboardType={isNumericKeyboard ? 'numeric' : 'default'}
+            maxLength={fieldMaxLength}
             autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
             multiline={field.multiline || field.key === 'land_transfer_explanation'}
             numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}

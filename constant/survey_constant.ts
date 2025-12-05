@@ -96,6 +96,14 @@ export const steps = [
         showFor: ['new', 'existing', 'transfer'],
       },
       {
+        key: 'statusType',
+        label: 'Status Type',
+        required: true,
+        placeholder: 'Enter status type',
+        showFor: ['new', 'existing', 'transfer'],
+        
+      },
+      {
         key: 'pin_code',
         label: 'Pin Code',
         required: true,
@@ -110,9 +118,16 @@ export const steps = [
         showFor: ['new', 'existing', 'transfer'],
       },
       {
-        key: 'document_image',
-        label: 'Document Image',
+        key: 'documentNumber',
+        label: 'Document Number',
         required: true,
+        placeholder: 'Enter document number',
+        showFor: ['new', 'existing', 'transfer'],
+      },
+      {
+        key: 'document_image',
+        label: `Document Image`,
+        required: false,
         placeholder: 'Upload document image',
         showFor: ['new', 'existing', 'transfer'],
         type: 'image',
@@ -127,7 +142,7 @@ export const steps = [
       {
         key: 'pan_image',
         label: 'PAN Image',
-        required: true,
+        required: false,
         placeholder: 'Upload PAN image',
         showFor: ['new', 'existing', 'transfer'],
         type: 'image',
@@ -143,7 +158,7 @@ export const steps = [
       {
         key: 'trade_license_attached',
         label: 'Trade License (Attachment)',
-        required: true,
+        required: false,
         placeholder: 'Upload trade license',
         showFor: ['new', 'existing', 'transfer'],
         type: 'image',
@@ -156,6 +171,14 @@ export const steps = [
         showFor: ['existing', 'transfer'],
       },
       {
+        key: 'license_image',
+        label: 'License Image',
+        required: false,
+        placeholder: 'Upload license image',
+        showFor: ['existing', 'transfer'],
+        type: 'image',
+      },
+      {
         key: 'license_expiry_date',
         label: 'License Expiry Date',
         required: true,
@@ -165,7 +188,7 @@ export const steps = [
       },
       {
         key: 'property_tax_payment_to_year',
-        label: 'Property Tax Paid Up To Year',
+        label: 'Fees and Rent Up To Year',
         required: true,
         placeholder: 'Enter year up to which property tax is paid ',
         showFor: ['existing', 'transfer'],
@@ -230,9 +253,17 @@ export const steps = [
       {
         key: 'affidavit_attached',
         label: 'Affidavit (Attachment)',
-        required: true,
+        required: false,
         placeholder: 'Upload affidavit',
         showFor: ['transfer'],
+        type: 'image',
+      },
+      {
+        key: 'fees_and_rent_up_to_year',
+        label: 'Fees and Rent Up To Year(Attachment)',
+        required: false,
+        placeholder: 'Upload fees and rent up to year',
+        showFor: ['existing'],
         type: 'image',
       },
       {
@@ -254,7 +285,7 @@ export const steps = [
       {
         key: 'noc_legal_heirs_attached',
         label: 'NOC Legal Heirs (Attachment)',
-        required: true,
+        required: false,
         placeholder: 'Upload NOC from legal heirs',
         showFor: ['transfer'],
         type: 'image',
@@ -275,6 +306,18 @@ export const steps = [
         placeholder: 'Select district',
       },
       {
+        key: 'block_municipality_id',
+        label: 'Block/Municipality',
+        required: true,
+        placeholder: 'Select block/municipality',
+      },
+      {
+        key: 'ward_id',
+        label: 'GP/Ward',
+        required: true,
+        placeholder: 'Select GP/ward',
+      },
+      {
         key: 'police_station_id',
         label: 'Police Station',
         required: true,
@@ -282,20 +325,20 @@ export const steps = [
       },
       {
         key: 'hat_id',
-        label: 'Hat',
+        label: 'Haat/Locality',
         required: true,
         placeholder: 'Select hat',
       },
       {
         key: 'mouza_id',
         label: 'Mouza',
-        required: true,
+        required: false,
         placeholder: 'Select mouza',
       },
       {
         key: 'adsr_name',
         label: 'ADSR Name',
-        required: true,
+        required: false,
         placeholder: 'Select ADSR Office',
       },
       {
@@ -313,19 +356,19 @@ export const steps = [
       {
         key: 'jl_no',
         label: 'JL No',
-        required: true,
+        required: false,
         placeholder: 'Enter JL number',
       },
       {
         key: 'khatian_no',
         label: 'Khatian No',
-        required: true,
+        required: false,
         placeholder: 'Enter khatian number',
       },
       {
         key: 'plot_no',
         label: 'Plot No',
-        required: true,
+        required: false,
         placeholder: 'Enter plot number',
       },
       {
@@ -334,12 +377,6 @@ export const steps = [
         required: true,
         placeholder: 'Enter commercial area in sqft',
       },
-      // {
-      //   key: 'direction',
-      //   label: 'Direction',
-      //   required: true,
-      //   placeholder: 'Enter direction',
-      // },
       {
         key: 'latitude',
         label: 'Latitude',
@@ -362,14 +399,14 @@ export const steps = [
       {
         key: 'land_valuation_document',
         label: 'Land Valuation document (Attachment)',
-        required: true,
+        required: false,
         placeholder: 'Upload Land Valuation document',
         type: 'image',
       },
       {
         key: 'land_valuation_amount',
         label: 'Land Valuation Amount',
-        required: true,
+        required: false,
         placeholder: 'Enter Amount',
       },
       {
@@ -425,6 +462,11 @@ export const steps = [
 export const licenseType = [
   { key: '1', value: 'Holding' },
   { key: '2', value: 'Stall' },
+];
+
+export const statusType = [
+  { key: '1', value: 'Active' },
+  { key: '2', value: 'Inactive' },
 ];
 export const applicationStatus = [
   { key: '1', value: 'New' },
