@@ -616,15 +616,13 @@ const styles = StyleSheet.create({
   },
   metaItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    
+    alignItems: 'center',  
   },
   activebox: {
     padding: 5,
     borderRadius: 10,
     textAlign: 'center',
     marginLeft: 5,
-    
   },
   inactivebox: {
     padding: 5,

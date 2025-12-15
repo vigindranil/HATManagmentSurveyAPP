@@ -598,3 +598,71 @@ export async function getUserDetailsByPhoneNumber(phoneNo: string | number) {
     throw error;
   }
 }
+
+
+export async function getBlocksOrMunicipalitiesByDistrictId(DistrictID: string | number, type: string | number) {
+
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDistWiseBlockOrMunicipalityDetails?BlockMunicipalityStatus=${type}&DistrictID=${DistrictID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getDistWiseBlockOrMunicipalityDetails?BlockMunicipalityStatus=${type}&DistrictID=${DistrictID}`;
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
+
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
+
+    if (!response.ok) {
+      throw { status: response.status, message: 'API Error' };
+    }
+
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    console.log('Error fetching mouza list:', error.message);
+    throw error;
+  }
+}
+
+
+export async function getBoundaryDetailsByBoundaryID(BoundaryLevelID: string | number, BoundaryID: string | number, IsUrban: string | number, LoginUserID: string | number) {
+
+  const url = process.env.EXPO_PUBLIC_BASE_URL
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getBoundaryDetailsByBoundaryID?BoundaryLevelID=${BoundaryLevelID}&BoundaryID=${BoundaryID}&IsUrban=${IsUrban}&LoginUserID=${LoginUserID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +
+      `/getBoundaryDetailsByBoundaryID?BoundaryLevelID=${BoundaryLevelID}&BoundaryID=${BoundaryID}&IsUrban=${IsUrban}&LoginUserID=${LoginUserID}`;
+  try {
+    const yourTokenVariable = getAuthToken();
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${yourTokenVariable}`,
+      },
+    });
+
+    if (response.status === 401) {
+      throw { status: 401, message: 'Unauthorized: Please login again.' };
+    }
+
+    if (!response.ok) {
+      throw { status: response.status, message: 'API Error' };
+    }
+
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    console.log('Error fetching mouza list:', error.message);
+    throw error;
+  }
+}

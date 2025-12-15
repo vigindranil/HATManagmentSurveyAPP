@@ -37,14 +37,16 @@ import {
   saveSurveyOnline,
   getJlNoByThanaId,
   getAdsrByThanaId,
-  getUserDetailsByPhoneNumber
+  getUserDetailsByPhoneNumber,
+  getBlocksOrMunicipalitiesByDistrictId,
+  getBoundaryDetailsByBoundaryID
 } from '@/api';
 import *as ImagePicker from 'expo-image-picker';
 import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
-import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength,statusType } from '../../constant/survey_constant';
+import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength,statusType,blockOrMunicipalityType } from '../../constant/survey_constant';
 
 
 type ImageFieldType = {
@@ -66,6 +68,7 @@ interface SurveyData {
   stall_no: string;
   holding_no: string;
   statusType: string;
+  block_or_municipality: string;
   jl_no: string;
   khatian_no: string;
   plot_no: string;
@@ -143,6 +146,7 @@ export default function Survey() {
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [blockMunicipalityOptions, setBlockMunicipalityOptions] = useState([]);
   const [wardOptions, setWardOptions] = useState([]);
+  const [rawBlockMuniList, setRawBlockMuniList] = useState<any[]>([]);
 
   // NEW REF: Tracks the status/type that was active the last time the user successfully clicked "Next" on Step 0.
   const lastConfirmedStep0State = useRef<{ licenseType: string | null, applicationStatus: string | null }>({
@@ -214,6 +218,8 @@ export default function Survey() {
         const districtList = await getAllDistrictList();
        if(districtList?.status === 0){
         setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
+        updateField('district_id', '9');
+        handleDistrictChange(9);
        }
        else {
         setAlertInfo({
@@ -243,9 +249,10 @@ export default function Survey() {
   const handleAlertConfirm = () => {
     setAlertInfo({ ...alertInfo, visible: false });
     if (alertInfo.type === 'success' && alertInfo.context === 'survey_submission') {
-      setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian' });
+      setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian', district_id: '9' });
       setCurrentStep(0);
       lastConfirmedStep0State.current = { licenseType: null, applicationStatus: null };
+       handleDistrictChange('9'); 
     }
     // NEW: Handle unauthorized access context after alert dismissal
     if (alertInfo.context === 'unauthorized_access') {
@@ -409,6 +416,17 @@ export default function Survey() {
           const suffix = field.key === 'document_image' ? ' Image' : ' Number';
           fieldLabel = `${selectedDoc.value}${suffix}`; // Becomes 'Aadhar Number' or 'Voter ID Number'
         }
+      }
+
+       if (field.key === 'block_municipality_id') {
+        if (surveyData.block_or_municipality === '1') fieldLabel = "Block Name";
+        else if (surveyData.block_or_municipality === '2') fieldLabel = "Municipality Name";
+      }
+
+      // 4. Dynamic Label for GP/Ward
+      if (field.key === 'ward_id') {
+        if (surveyData.block_or_municipality === '1') fieldLabel = "Gram Panchayat";
+        else if (surveyData.block_or_municipality === '2') fieldLabel = "Ward No";
       }
 
       const fieldValue = surveyData[field.key as keyof SurveyData] as string;
@@ -633,6 +651,142 @@ export default function Survey() {
     }
   };
 
+
+   const handleBlockTypeChange = async (type: string) => {
+    // 1. Update the type
+    updateField('block_or_municipality', type);
+
+    // 2. Clear children fields
+    updateField('block_municipality_id', '');
+    updateField('ward_id', '');
+    
+    // 3. Clear children options
+    setBlockMunicipalityOptions([]);
+    setWardOptions([]);
+
+    const districtId = '9';
+
+    // We need a district selected before fetching blocks/munis
+    if (!districtId) {
+       setAlertInfo({ visible: true, type: 'Missing Information', message: 'Please select a District first.' });
+       return; 
+    }
+
+    try {
+      let response;
+      if (type === '1') {
+        // User selected BLOCK -> Fetch Blocks
+        response = await getBlocksOrMunicipalitiesByDistrictId(Number(districtId), Number(type));
+        if (response?.status === 0) {
+            // Assuming API returns id: block_id, name: block_name
+            setRawBlockMuniList(response?.data);
+            setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
+        }
+        else {
+          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
+        }
+      } else {
+        // User selected MUNICIPALITY -> Fetch Municipalities
+        response = await getBlocksOrMunicipalitiesByDistrictId(Number(districtId), Number(type));
+        if (response?.status === 0) {
+            // Assuming API returns id: municipality_id, name: municipality_name
+            setRawBlockMuniList(response?.data);
+            setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
+        }
+        else {
+          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
+        }
+      }
+    } catch (err) {
+
+      const error = err as any;
+        if (error.status === 401) {
+          // Show alert for unauthorized access
+          setAlertInfo({
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Your session has expired. Please log in again.',
+            context: 'unauthorized_access',
+          });
+        } else {
+          console.error('Error fetching districts:', error.message);
+          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
+        }
+      
+     
+      
+    }
+  };
+
+
+
+  // 2. Handles selection of a specific Block or Municipality
+  const handleBlockMunicipalityIdChange = async (selectedId: string) => {
+    updateField('block_municipality_id', selectedId);
+    
+    // Reset Child (Ward/GP)
+    updateField('ward_id', '');
+    setWardOptions([]);
+
+    if (!selectedId) return;
+
+    // 1. FIND THE EXTRA DATA (Level ID)
+    const selectedObject = rawBlockMuniList.find(
+      (item) => String(item.boundary_id) === String(selectedId)
+    );
+
+    const levelId = selectedObject ? selectedObject.boundary_level_id : null;
+
+    // Optional: If you need to store level_id in surveyData for saving later
+    // updateField('boundary_level_id', String(levelId)); 
+
+    const type = surveyData.block_or_municipality; // '1' = Block, '2' = Muni
+
+    try {
+      let response;
+      if (type === '1') {
+        // Fetch GPs (Pass ID and Level ID if API requires it)
+        // Assuming your API function accepts levelId as 2nd param
+        response = await getBoundaryDetailsByBoundaryID(Number(levelId), Number(selectedId), 0, Number(user?.UserID)); 
+        
+        if (response?.status === 0) {
+            // Adjust mapping based on GP API response structure
+            setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
+        }else {
+          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward data.' });
+        }
+      } else {
+        // Fetch Wards (Pass ID and Level ID)
+        response = await getBoundaryDetailsByBoundaryID(Number(levelId), Number(selectedId), 0, Number(user?.UserID));
+        
+        if (response?.status === 0) {
+             // Adjust mapping based on Ward API response structure
+            setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
+          }else {
+            setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward data.' });
+          }
+      }
+    } catch (err) {
+      const error = err as any;
+      if (error.status === 401) {
+        // Show alert for unauthorized access
+        setAlertInfo({
+          visible: true,
+          type: 'Unauthorized',
+          message: 'Your session has expired. Please log in again.',
+          context: 'unauthorized_access',
+        });
+      } else {
+        console.error('Error fetching GP/Ward:', error.message);
+        setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward.' });
+      }
+    }
+  };
+
+
+
+
+
   const handleDistrictChange = async (selectedKey: any) => {
     const districtId = String(selectedKey);
     // Prevent wiping if selecting the same district
@@ -645,8 +799,9 @@ export default function Survey() {
     updateField('hat_id', '');
     updateField('adsr_name', '');
     updateField('jl_no', '');
-    updateField('block_municipality_id', '');
-    updateField('ward_id', '');
+    updateField('block_or_municipality', ''); // Reset the type selector
+    updateField('block_municipality_id', ''); // Reset the specific Block/Muni
+    updateField('ward_id', '');               // Reset GP/Ward
 
     // Clear options for dependent dropdowns
     setPoliceStationOptions([]);
@@ -683,6 +838,8 @@ export default function Survey() {
          
         }); 
       }
+
+
     } catch (err) {
       const error = err as any;
       if (error.status === 401) {
@@ -734,7 +891,6 @@ export default function Survey() {
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching mouza list.',
-         
         }); 
       }
       if(adsrList?.status === 0){
@@ -783,62 +939,64 @@ export default function Survey() {
     }
   };
 
-  const renderField = (field: any) => {
-    const statusMap: { [key: string]: string } = {
-      '1': 'new',
-      '2': 'existing',
-      '3': 'transfer',
-    };
-    const currentStatusString =
-      statusMap[surveyData.applicationStatus as string];
+const renderField = (field: any) => {
+    // ============================================================
+    // 1. VISIBILITY & HIDING CHECKS
+    // ============================================================
+    const statusMap: { [key: string]: string } = { '1': 'new', '2': 'existing', '3': 'transfer' };
+    const currentStatusString = statusMap[surveyData.applicationStatus as string];
 
-    if (field.key === 'holding_no' && surveyData.licenseType !== '1')
-      return null;
+    // Standard specific field checks
+    if (field.key === 'holding_no' && surveyData.licenseType !== '1') return null;
     if (field.key === 'stall_no' && surveyData.licenseType !== '2') return null;
-    if (
-      field.key === 'user_id' ||
-      field.key === 'latitude' ||
-      field.key === 'longitude'
-    )
-      return null;
+    if (['user_id', 'latitude', 'longitude'].includes(field.key)) return null;
 
-    if (field.showFor && !field.showFor.includes(currentStatusString))
-      return null;
-    if (
-      field.dependsOn &&
-      surveyData[field.dependsOn.key as keyof SurveyData] !==
-      field.dependsOn.value
-    )
-      return null;
+    // Check 'showFor' (New/Existing/Transfer)
+    if (field.showFor && !field.showFor.includes(currentStatusString)) return null;
 
+    // Check 'dependsOn' (e.g., is_within_family)
+    if (field.dependsOn && surveyData[field.dependsOn.key as keyof SurveyData] !== field.dependsOn.value) return null;
 
-      if ((field.key === 'document_image' || field.key === 'documentNumber') && !surveyData.documentTypes) {
-      return null;
-    }
+    // Check Document Type dependencies
+    if ((field.key === 'document_image' || field.key === 'documentNumber') && !surveyData.documentTypes) return null;
 
+    // >>> WATERFALL VISIBILITY LOGIC <<<
+    // 1. Hide "Block/Muni Name" until "Type" (Block/Municipality) is selected
+    if (field.key === 'block_municipality_id' && !surveyData.block_or_municipality) return null;
     
+    // 2. Hide "GP/Ward" until "Type" is selected
+    if (field.key === 'ward_id' && !surveyData.block_or_municipality) return null;
 
+
+    // ============================================================
+    // 2. DYNAMIC LABEL CALCULATION
+    // ============================================================
     let displayLabel = field.label;
-    
-    if (field.key === 'document_image' && surveyData.documentTypes) {
-      // Find the label (e.g., 'Aadhar') based on the key selected
-      const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
-      if (selectedDoc) {
-        displayLabel = `${selectedDoc.value} Image`; // e.g., "Aadhar Image"
-      }
+
+    // Change Label: Block Name vs Municipality Name
+    if (field.key === 'block_municipality_id') {
+      if (surveyData.block_or_municipality === '1') displayLabel = "Block Name";
+      else if (surveyData.block_or_municipality === '2') displayLabel = "Municipality Name";
     }
 
-    if (field.key === 'documentNumber' && surveyData.documentTypes) {
-      // Find the label (e.g., 'Aadhar') based on the key selected
-      const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
-      if (selectedDoc) {
-        displayLabel = `${selectedDoc.value} Number`; // e.g., "Aadhar Image"
-      }
+    // Change Label: GP vs Ward
+    if (field.key === 'ward_id') {
+      if (surveyData.block_or_municipality === '1') displayLabel = "Gram Panchayat";
+      else if (surveyData.block_or_municipality === '2') displayLabel = "Ward No";
     }
 
+    // Change Label: Document Name
+    if ((field.key === 'document_image' || field.key === 'documentNumber') && surveyData.documentTypes) {
+      const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
+      if (selectedDoc) displayLabel = `${selectedDoc.value}${field.key === 'document_image' ? ' Image' : ' Number'}`;
+    }
 
     const value = surveyData[field.key as keyof SurveyData];
 
+
+    // ============================================================
+    // 3. STANDARD DROPDOWNS (Includes Block/Muni Type)
+    // ============================================================
     const dropdownDataMap: Record<string, any[]> = {
       licenseType,
       applicationStatus,
@@ -846,490 +1004,317 @@ export default function Survey() {
       usesType,
       documentTypes,
       statusType,
+      block_or_municipality: blockOrMunicipalityType,
       transfer_relationship: transferRelationshipOptions,
     };
 
-    let selectedValueForSelectList = '';
-    if (value !== null && value !== undefined) {
-      if (field.type === 'dropdown') {
-        selectedValueForSelectList = value === true ? 'true' : value === false ? 'false' : String(value);
-      } else {
-        selectedValueForSelectList = String(value);
-      }
-    }
+    if (
+      (dropdownDataMap[field.key] || field.type === 'dropdown') && 
+      !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id', 'ward_id'].includes(field.key)
+    ) {
+      const data = dropdownDataMap[field.key] || yesNoOptions;
 
-    // Determine the dynamic key for SelectList components to force remount
-    let selectListKey = field.key; // Default key
-    if (field.key === 'police_station_id') {
-      selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
-    } else if (['mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key)) {
-      selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
-    }
-
-
-    // Render standard dropdowns (not dynamically fetched based on other fields)
-    // This condition checks if the field is in dropdownDataMap AND is NOT one of the dependent dropdowns
-    if (dropdownDataMap[field.key] || (field.type === 'dropdown' && !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id','ward_id'].includes(field.key))) {
-      const data = dropdownDataMap[field.key] || yesNoOptions; // Use dropdownDataMap first, fallback to yesNoOptions if field.type is 'dropdown'
-      const saveType = 'key';
-
-      // MODIFIED: Calculate defaultOption to ensure UI persistence
+      // Find Default Option
       let defaultOptionObj = undefined;
       if (value !== null && value !== undefined) {
         const strVal = String(value);
         const foundItem = data.find(item => item.key === strVal);
-        if (foundItem) {
-          defaultOptionObj = { key: strVal, value: foundItem.value };
-        }
+        if (foundItem) defaultOptionObj = { key: strVal, value: foundItem.value };
       }
 
-      let lockedLabel = null; // If this is set, the field becomes read-only
-      
-      // 1. Lock Usage Type to 'Commercial' if License Type is 'Stall' (2)
-      if (field.key === 'usesType' && surveyData.licenseType === '2') {
-        lockedLabel = 'Commercial';
+      // Logic for Locked/Disabled Fields
+      let lockedLabel = null;
+      let isDisabled = false;
+      let disabledPlaceholder = field.placeholder;
+
+      // Business Logic Locks
+      if (field.key === 'usesType' && surveyData.licenseType === '2') lockedLabel = 'Commercial';
+      if (field.key === 'applicationFor' && ['1', '2'].includes(surveyData.applicationStatus as string)) lockedLabel = 'Self';
+
+      // Block Type Logic: Disable if District not selected
+      if (field.key === 'block_or_municipality' && !surveyData.district_id) {
+        isDisabled = true;
+        disabledPlaceholder = "Select District first";
       }
 
-      // 2. Lock Application For to 'Self' if Status is 'New' (1) or 'Existing' (2)
-      if (field.key === 'applicationFor' && (surveyData.applicationStatus === '1' || surveyData.applicationStatus === '2')) {
-        lockedLabel = 'Self';
+      // Dynamic Key to reset Block/Muni Type when District changes
+      let standardDropdownKey = field.key;
+      if (field.key === 'block_or_municipality') {
+          standardDropdownKey = `${field.key}-${surveyData.district_id || 'none'}`;
       }
-
 
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
-            {field.label}{' '}
-            {field.required && !(currentStatusString === 'transfer' && ['previous_license_no', 'license_expiry_date', 'property_tax_payment_to_year',].includes(field.key)) && <Text style={styles.required}>*</Text>}
+            {displayLabel} {field.required && <Text style={styles.required}>*</Text>}
           </Text>
-          <View style={styles.inputContainer}>
-             {lockedLabel ? (            
-              <TextInput 
-                style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5',borderRadius: 10 }]} // Grey text
-                value={lockedLabel} // Hardcoded display value
-                editable={false}   // Prevent editing
+          <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6' }]}>
+            {lockedLabel ? (
+               <TextInput style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10 }]} value={lockedLabel} editable={false} />
+            ) : isDisabled ? (
+               <View style={{ padding: 16, justifyContent: 'center' }}>
+                 <Text style={{ color: '#9CA3AF', fontSize: 16 }}>{disabledPlaceholder}</Text>
+               </View>
+            ) : (
+              <SelectList
+                key={standardDropdownKey}
+                setSelected={(val: any) => {
+                  let v = typeof val === 'object' && 'key' in val ? val.key : val;
+                  const finalValue = v === 'true' ? true : v === 'false' ? false : String(v);
+
+                  if (field.key === 'block_or_municipality') {
+                    handleBlockTypeChange(finalValue); 
+                  } else {
+                    if (field.key === 'documentTypes' && surveyData.documentTypes !== finalValue) {
+                      updateField('document_image', null); updateField('documentNumber', null);
+                    }
+                    if (field.key === 'licenseType' && finalValue === '2') updateField('usesType', '1');
+                    if (field.key === 'licenseType' && finalValue !== '2') updateField('usesType', '');
+                    if (field.key === 'applicationStatus') updateField('applicationFor', (finalValue === '1' || finalValue === '2') ? '1' : '');
+                    
+                    updateField(field.key, finalValue);
+                  }
+                }}
+                data={data}
+                save="key"
+                search={false}
+                placeholder={field.placeholder}
+                defaultOption={defaultOptionObj}
+                boxStyles={{ borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 14 }}
+                dropdownStyles={{ borderWidth: 0 }}
+                dropdownTextStyles={{ fontWeight: 'bold', color: '#111827', fontSize: 16 }}
+                dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 10, marginHorizontal: 10 }}
+                inputStyles={{ color: '#000000', fontSize: 16 }}
               />
-            ):(
-            <SelectList
-              key={selectListKey} // Apply dynamic key
-              setSelected={(val: any) => {
-                let valueToStore = val;
-                if (typeof val === 'object' && val !== null && 'key' in val) {
-                  valueToStore = val.key;
-                }
-                const finalValue = valueToStore === 'true' ? true : valueToStore === 'false' ? false : String(valueToStore);
-
-                // --- 2. CLEAR IMAGE IF DOCUMENT TYPE CHANGES (NEW) ---
-                if (field.key === 'documentTypes') {
-                   // If the value is actually changing, clear the image field
-                   if (surveyData.documentTypes !== finalValue) {
-                     updateField('document_image', null); 
-                   }
-                }
-
-                if (field.key === 'documentTypes') {
-                 if (surveyData.documentTypes !== finalValue) {
-                     updateField('documentNumber', null); 
-                   }
-                }
-
-
-
-                if (field.key === 'licenseType') {
-                    // If switching to Stall (2)
-                    if (finalValue === '2') {
-                        updateField('usesType', '1'); // Force 'Commercial'
-                    } 
-                    // If switching to Holding (1) (or anything else)
-                    else {
-                        // Check if we need to clear (only if it was previously Stall/Commercial)
-                        // Or just strictly clear it every time they change license type to be safe:
-                        updateField('usesType', ''); 
-                    }
-                  }
-
-                   if (field.key === 'applicationStatus') {
-                    if (finalValue === '1' || finalValue === '2') {
-                        // If New (1) or Existing (2) -> Force 'Self' (1)
-                        updateField('applicationFor', '1');
-                    } else {
-                        // If Transfer (3) -> Clear so user can choose Self/Family/Others
-                        updateField('applicationFor', '');
-                    }
-                  }
-                updateField(field.key, finalValue);
-              }}
-              placeholder={field.placeholder}
-              data={data}
-              save={saveType}
-              search={false}
-              selected={selectedValueForSelectList}
-              defaultOption={defaultOptionObj} // Added defaultOption here
-              boxStyles={{
-                borderWidth: 0,
-                elevation: 0,
-                shadowOpacity: 0,
-                backgroundColor: 'transparent',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
-              dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }}
-              dropdownTextStyles={{
-                fontWeight: 'bold',
-                color: '#111827',
-                fontSize: 16,
-              }}
-              dropdownItemStyles={{
-                borderBottomWidth: 1,
-                borderBottomColor: '#E5E7EB',
-                paddingVertical: 10,
-                marginHorizontal: 10,
-              }}
-              inputStyles={{ color: '#000000', fontSize: 16 }}
-            />)}
+            )}
           </View>
         </View>
       );
     }
 
-    // Render dependent dropdowns (District, Police Station, Mouza, Hat, ADSR, JL No)
-    if (
-      ['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', `block_municipality_id`,`ward_id`].includes(
-        field.key
-      )
-    ) {
+    // ============================================================
+    // 4. DEPENDENT / API DROPDOWNS
+    // ============================================================
+    if (['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id', 'ward_id'].includes(field.key)) {
+      
       let data: any[] = [];
+      let isDisabled = false;
+      let disabledPlaceholder = "";
+      
       let currentFieldHandler = (val: any) => {
-        let valueToStore = val;
-        if (typeof val === 'object' && val !== null && 'key' in val) {
-          valueToStore = val.key;
-        }
-
-        if (field.key === 'district_id') {
-          handleDistrictChange(String(valueToStore));
-        } else if (field.key === 'police_station_id') {
-          handlePoliceStationChange(String(valueToStore));
-        } else {
-          updateField(field.key, String(valueToStore));
-        }
+        let v = typeof val === 'object' && 'key' in val ? val.key : val;
+        updateField(field.key, String(v));
       };
 
-      if (field.key === 'district_id') {
-        data = district;
-      } else if (field.key === 'police_station_id') {
-        data = policeStationOptions;
-      } else if (field.key === 'mouza_id') {
-        data = mouzaOptions;
-      } else if (field.key === 'hat_id') {
-        data = haatAllDetailsOptions;
+      // A. Block / Municipality Name 
+      if (field.key === 'block_municipality_id') {
+        data = blockMunicipalityOptions; 
+        currentFieldHandler = (val: any) => {
+           let v = typeof val === 'object' && 'key' in val ? val.key : val;
+           handleBlockMunicipalityIdChange(String(v));
+        };
       }
-      else if (field.key === 'adsr_name') {
-        data = adsrOptions;
-      }
-      else if (field.key === 'jl_no') {
-        data = jlNOOptions; // Use the formatted JL No options
+      
+      // B. GP / Ward 
+      else if (field.key === 'ward_id') {
+        data = wardOptions; 
+        // Disable if Parent Name is not selected
+        if (!surveyData.block_municipality_id) {
+           isDisabled = true;
+           const parentNameLabel = surveyData.block_or_municipality === '1' ? "Block Name" : "Municipality Name";
+           disabledPlaceholder = `Select ${parentNameLabel} first`;
+        }
       }
 
-      // MODIFIED: Calculate defaultOption to ensure UI persistence
+      // C. District
+      else if (field.key === 'district_id') {
+        data = district;
+        currentFieldHandler = (val: any) => {
+           let v = typeof val === 'object' && 'key' in val ? val.key : val;
+           handleDistrictChange(String(v));
+        };
+        // >>> LOCK DISTRICT ALWAYS (As requested) <<<
+        isDisabled = true; 
+      }
+      
+      // D. Other Fields
+      else if (field.key === 'police_station_id') {
+        data = policeStationOptions;
+        if (!surveyData.district_id) { isDisabled = true; disabledPlaceholder = "Select District first"; }
+        currentFieldHandler = (val: any) => {
+           let v = typeof val === 'object' && 'key' in val ? val.key : val;
+           handlePoliceStationChange(String(v));
+        };
+      }
+      else if (field.key === 'hat_id') {
+        data = haatAllDetailsOptions;
+        if (!surveyData.district_id) { isDisabled = true; disabledPlaceholder = "Select District first"; }
+      }
+      else {
+        if (field.key === 'mouza_id') data = mouzaOptions;
+        if (field.key === 'adsr_name') data = adsrOptions;
+        if (field.key === 'jl_no') data = jlNOOptions;
+        if (!surveyData.police_station_id) { isDisabled = true; disabledPlaceholder = "Select Police Station first"; }
+      }
+
+      // 1. Find the Selected Object & Locked Label Logic
       let defaultOptionObj = undefined;
+      let lockedLabel = ""; 
+
       if (value !== null && value !== undefined) {
         const strVal = String(value);
         const foundItem = data.find(item => item.key === strVal);
+        
         if (foundItem) {
-          defaultOptionObj = { key: strVal, value: foundItem.value };
-        }
+            defaultOptionObj = { key: strVal, value: foundItem.value };
+            lockedLabel = foundItem.value; 
+        } 
+      }
+
+      // 2. Unique Key Generation
+      // Ensures the component re-renders when parents change, but NOT when it selects its own value (prevents bugs)
+      let selectListKey = `${field.key}`;
+      if (field.key === 'block_municipality_id') {
+         selectListKey = `${field.key}-${surveyData.district_id}-${surveyData.block_or_municipality}`;
+      } else if (field.key === 'ward_id') {
+         selectListKey = `${field.key}-${surveyData.block_municipality_id}`;
+      } else if (['mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key)) {
+         selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
+      } else if (field.key === 'police_station_id') {
+         selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
       }
 
       return (
         <View key={field.key} style={styles.fieldContainer}>
           <Text style={styles.fieldLabel}>
-            {field.label}{' '}
-            {field.required && <Text style={styles.required}>*</Text>}
+            {displayLabel} {field.required && <Text style={styles.required}>*</Text>}
           </Text>
-          <View style={styles.inputContainer}>
-            <SelectList
-              key={selectListKey} // Apply dynamic key for all dependent dropdowns
-              setSelected={currentFieldHandler}
-              placeholder={field.placeholder}
-              data={data}
-              save="key"
-              search={true}
-              selected={selectedValueForSelectList}
-              defaultOption={defaultOptionObj} // Added defaultOption here
-              boxStyles={{
-                borderWidth: 0,
-                elevation: 0,
-                shadowOpacity: 0,
-                backgroundColor: 'transparent',
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-              }}
-              dropdownStyles={{ borderWidth: 0, borderColor: 'transparent' }}
-              dropdownTextStyles={{
-                fontWeight: 'bold',
-                color: '#111827',
-                fontSize: 16,
-              }}
-              dropdownItemStyles={{
-                borderBottomWidth: 1,
-                borderBottomColor: '#E5E7EB',
-                paddingVertical: 10,
-                marginHorizontal: 10,
-              }}
-              inputStyles={{ color: '#000000', fontSize: 16 }}
-            />
+          <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }]}>
+            
+            {/* SHOW TEXT INPUT IF DISABLED & LOCKED LABEL EXISTS (e.g. "JALPAIGURI") */}
+            {isDisabled && lockedLabel ? (
+                <TextInput 
+                    style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10, fontWeight:'600' }]} 
+                    value={lockedLabel} 
+                    editable={false} 
+                />
+            ) : isDisabled ? (
+              <View style={{ paddingHorizontal: 16, paddingVertical: 14, justifyContent: 'center' }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 16, fontWeight: '400' }}>{disabledPlaceholder || "Loading..."}</Text>
+              </View>
+            ) : (
+              <SelectList
+                key={selectListKey}
+                setSelected={currentFieldHandler}
+                data={data}
+                placeholder={field.placeholder}
+                save="key"
+                search={true}
+                defaultOption={defaultOptionObj}
+                boxStyles={{ borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 16, paddingVertical: 14 }}
+                dropdownStyles={{ borderWidth: 0 }}
+                dropdownTextStyles={{ fontWeight: 'bold', color: '#111827', fontSize: 16 }}
+                dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 10, marginHorizontal: 10 }}
+                inputStyles={{ color: '#000000', fontSize: 16 }}
+              />
+            )}
           </View>
         </View>
       );
     }
 
-    if (field.type === 'image') {
-      const imageValue =
-        typeof value === 'object' && value !== null && 'uri' in value
-          ? (value as ImageFieldType)
-          : undefined;
-      return (
-        <View key={field.key} style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>
-            {displayLabel}{' '} 
-            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_image') && <Text style={styles.required}>*</Text>}
-          </Text>
-          <TouchableOpacity
-            style={styles.imagePickerButton}
-            onPress={() => processImage(field.key, false)}
-          >
-            {loadingImage === field.key ? (
-              <View style={styles.imagePreviewContainer}>
-                <ActivityIndicator size="large" color="#2563EB" />
-              </View>
-            ) : imageValue?.uri ? (
-              <View style={styles.imagePreviewContainer}>
-                <Image
-                  source={{ uri: imageValue.uri }}
-                  style={styles.imagePreview}
-                />
-                <TouchableOpacity
-                  style={styles.removeImageButton}
-                  onPress={() => updateField(field.key, null)}
-                >
-                  <XCircle size={28} color="#DC2626" fill="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.imagePickerText}>{field.placeholder}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      );
+    // ============================================================
+    // 5. IMAGE PICKERS
+    // ============================================================
+    if (field.type === 'image' || field.type === 'images') {
+        const isMulti = field.type === 'images';
+        const imageValue = typeof value === 'object' && value !== null && 'uri' in value ? (value as ImageFieldType) : undefined;
+        return (
+            <View key={field.key} style={styles.fieldContainer}>
+            <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_image') && <Text style={styles.required}>*</Text>}</Text>
+            <TouchableOpacity style={styles.imagePickerButton} onPress={() => processImage(field.key, isMulti)}>
+                {loadingImage === field.key ? ( <View style={styles.imagePreviewContainer}><ActivityIndicator size="large" color="#2563EB" /></View> ) 
+                : imageValue?.uri ? (
+                <View style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: imageValue.uri }} style={styles.imagePreview} />
+                    <TouchableOpacity style={styles.removeImageButton} onPress={() => updateField(field.key, null)}><XCircle size={28} color="#DC2626" fill="#ffffff" /></TouchableOpacity>
+                </View> ) 
+                : ( <Text style={styles.imagePickerText}>{field.placeholder}</Text> )}
+            </TouchableOpacity>
+            </View>
+        );
     }
 
-    if (field.type === 'images') {
-      const imageValue =
-        typeof value === 'object' && value !== null && 'uri' in value
-          ? (value as ImageFieldType)
-          : undefined;
-      return (
-        <View key={field.key} style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>
-            {field.label}{' '}
-            {field.required && <Text style={styles.required}>*</Text>}
-          </Text>
-          <TouchableOpacity
-            style={styles.imagePickerButton}
-            onPress={() => processImage(field.key, true)}
-          >
-            {loadingImage === field.key ? (
-              <View style={styles.imagePreviewContainer}>
-                <ActivityIndicator size="large" color="#2563EB" />
-              </View>
-            ) : imageValue?.uri ? (
-              <View style={styles.imagePreviewContainer}>
-                <Image
-                  source={{ uri: imageValue.uri }}
-                  style={styles.imagePreview}
-                />
-                <TouchableOpacity
-                  style={styles.removeImageButton}
-                  onPress={() => updateField(field.key, null)}
-                >
-                  <XCircle size={28} color="#DC2626" fill="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.imagePickerText}>{field.placeholder}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
+    // ============================================================
+    // 6. DATE PICKER
+    // ============================================================
     if (field.type === 'date') {
-      return (
-        <View key={field.key} style={styles.fieldContainer}>
-          <Text style={styles.fieldLabel}>
-            {field.label}{' '}
-            {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date') && <Text style={styles.required}>*</Text>}
-          </Text>
-          <TouchableOpacity
-            style={styles.datePickerButton}
-            onPress={() => setShowPicker(true)}
-          >
-            <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
-            <Text style={{ color: '#111827', fontSize: 16 }}>
-              {value
-                ? new Date(value as string).toLocaleDateString()
-                : 'Select Date'}
-            </Text>
-          </TouchableOpacity>
-          {showPicker && (
-            <DateTimePicker
-              value={value ? new Date(value as string) : date}
-              mode="date"
-              display="default"
-              onChange={(e, d) => {
-                setShowPicker(false);
-                if (d) updateField(field.key, d.toISOString().split('T')[0]);
-              }}
-            />
-          )}
-        </View>
-      );
+        return (
+            <View key={field.key} style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>{field.label} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date') && <Text style={styles.required}>*</Text>}</Text>
+                <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowPicker(true)}>
+                    <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
+                    <Text style={{ color: '#111827', fontSize: 16 }}>{value ? new Date(value as string).toLocaleDateString() : 'Select Date'}</Text>
+                </TouchableOpacity>
+                {showPicker && (<DateTimePicker value={value ? new Date(value as string) : date} mode="date" display="default" onChange={(e, d) => { setShowPicker(false); if (d) updateField(field.key, d.toISOString().split('T')[0]); }} />)}
+            </View>
+        );
     }
 
+    // ============================================================
+    // 7. TEXT INPUTS
+    // ============================================================
     const isEditable = field.key !== 'user_id' && field.key !== 'citizenship';
-    //  !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date'));
-
     const isAutoFilledField = ['name', 'guardian_name', 'address', 'pin_code', 'pan'].includes(field.key);
-    // NEW: Use mobileAutofillSuccessful to determine if the field should be disabled by autofill
     const isDisabledByAutoFill = isAutoFilledField && mobileAutofillSuccessful;
+    
+    let fieldMaxLength = getMaxLength(field.key);
+    if (field.key === 'documentNumber') fieldMaxLength = surveyData.documentTypes === '1' ? 12 : 10;
+    
+    const isNumericKeyboard = numericFields.includes(field.key) || (field.key === 'documentNumber' && surveyData.documentTypes === '1');
     let fieldYPosition = 0;
 
-     let fieldMaxLength = getMaxLength(field.key);
-    
-    if (field.key === 'documentNumber') {
-      if (surveyData.documentTypes === '1') {
-        fieldMaxLength = 12; // Aadhar is exactly 12 digits
-      } else {
-        fieldMaxLength = 10; // Voter ID can be longer/alphanumeric
-      }
-    }
-
-     const isNumericKeyboard = 
-      numericFields.includes(field.key) || 
-      (field.key === 'documentNumber' && surveyData.documentTypes === '1'); // '1' is Aadhar
-
-
     return (
-      <View
-        key={field.key}
-        style={styles.fieldContainer}
-        onLayout={(event) => {
-          fieldYPosition = event.nativeEvent.layout.y;
-        }}
-      >
-        <Text style={styles.fieldLabel}>
-          {displayLabel}{' '}
-          {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}
-
-        </Text>
-        <View style={[styles.inputContainer,  (!isEditable || isDisabledByAutoFill) && { backgroundColor: '#F3F4F6' }]}>
-          <TextInput
-            style={[
-              styles.textInput,
-              (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline,
-             
-            ]}
-            value={(value as string) || ''}
-            placeholder={field.placeholder}
-            editable={isEditable && !isDisabledByAutoFill} // This is the crucial line for enabling/disabling
-            placeholderTextColor="#9CA3AF"
-             keyboardType={isNumericKeyboard ? 'numeric' : 'default'}
-            maxLength={fieldMaxLength}
-            autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
-            multiline={field.multiline || field.key === 'land_transfer_explanation'}
-            numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
-            onFocus={() => {
-              if (fieldYPosition > 0) {
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollTo({
-                    y: fieldYPosition - 100,
-                    animated: true,
-                  });
-                }, 100);
-              }
-            }}
-            onChangeText={(text) => {
-              updateField(field.key, text);
-              // Trigger API call when 10 digits are entered for mobile
-              if (field.key === 'mobile' && text.length === 10) {
-                getUserDetailsByPhoneNumber(text)
-                  .then(response => {
-                    if(response?.status !== 0){
-                      setAlertInfo({
-                        visible: true,
-                        type: 'Something went Wrong',
-                        message: 'Something went wrong.',
-                       
-                      }); 
-                    } 
-                    if (response?.data && response?.status === 0) {
-                      setMobileAutofillSuccessful(true); // Autofill successful
-                      // Update fields only if they are currently empty or not explicitly set by the user
-                      if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
-                      if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
-                      if (!surveyData.address) updateField('address', response.data.address || '');
-                      if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
-                      if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
-                      setAlertInfo({
-                        visible: true,
-                        type: 'Autofill Successful',
-                        message: 'User details autofilled!',
-                        context: 'autofill_success',
-                      });
-                    } else {
-                      setMobileAutofillSuccessful(false); // No data found, allow manual edit
-                      // If no data found, explicitly clear fields so they become editable
-                      updateField('name', '');
-                      updateField('guardian_name', '');
-                      updateField('address', '');
-                      updateField('pin_code', '');
-                      updateField('pan', '');
-                      setAlertInfo({
-                        visible: true,
-                        type: 'User Not Exist',
-                        message: 'No existing user found. Please fill details manually.',
-                      });
-                    }
-                  })
-                  .catch(error => {
-                    console.error('Error fetching user details:', error);
-                    setMobileAutofillSuccessful(false); // API call failed, allow manual edit
-                    // If API call fails, explicitly clear fields so they become editable
-                    updateField('name', '');
-                    updateField('guardian_name', '');
-                    updateField('address', '');
-                    updateField('pin_code', '');
-                    updateField('pan', '');
-                    setAlertInfo({
-                      visible: true,
-                      type: 'User Details Unavailable',
-                      message: 'Error fetching user details. Please fill manually.',
-                    });
-                  });
-              } else if (field.key === 'mobile' && text.length < 10) {
-                // If mobile number is incomplete or cleared by user, allow manual editing
-                setMobileAutofillSuccessful(false); // Reset the flag
-                // Optionally clear related autofilled fields immediately as mobile is no longer complete
-                updateField('name', '');
-                updateField('guardian_name', '');
-                updateField('address', '');
-                updateField('pin_code', '');
-                updateField('pan', '');
-              }
-            }}
-          />
+        <View key={field.key} style={styles.fieldContainer} onLayout={(event) => { fieldYPosition = event.nativeEvent.layout.y; }}>
+            <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}</Text>
+            <View style={[styles.inputContainer, (!isEditable || isDisabledByAutoFill) && { backgroundColor: '#F3F4F6' }]}>
+            <TextInput
+                style={[styles.textInput, (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline]}
+                value={(value as string) || ''}
+                placeholder={field.placeholder}
+                editable={isEditable && !isDisabledByAutoFill}
+                placeholderTextColor="#9CA3AF"
+                keyboardType={isNumericKeyboard ? 'numeric' : 'default'}
+                maxLength={fieldMaxLength}
+                autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
+                multiline={field.multiline || field.key === 'land_transfer_explanation'}
+                numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
+                onFocus={() => { if (fieldYPosition > 0) { setTimeout(() => { scrollViewRef.current?.scrollTo({ y: fieldYPosition - 100, animated: true }); }, 100); } }}
+                onChangeText={(text) => {
+                updateField(field.key, text);
+                if (field.key === 'mobile') {
+                    if (text.length === 10) {
+                        getUserDetailsByPhoneNumber(text).then(response => {
+                            if (response?.data && response?.status === 0) {
+                                setMobileAutofillSuccessful(true);
+                                if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
+                                if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
+                                if (!surveyData.address) updateField('address', response.data.address || '');
+                                if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
+                                if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
+                                setAlertInfo({ visible: true, type: 'Autofill Successful', message: 'User details autofilled!', context: 'autofill_success' });
+                            } else {
+                                setMobileAutofillSuccessful(false);
+                                ['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, ''));
+                                setAlertInfo({ visible: true, type: 'User Not Found', message: 'No existing user found.' });
+                            }
+                        }).catch(() => { setMobileAutofillSuccessful(false); ['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, '')); });
+                    } else if (text.length < 10) { setMobileAutofillSuccessful(false); }
+                }
+                }}
+            />
+            </View>
         </View>
-      </View>
     );
   };
 
