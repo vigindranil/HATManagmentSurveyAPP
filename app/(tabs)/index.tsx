@@ -108,6 +108,8 @@ export default function Dashboard() {
           const stallData = await getNumberOfStallsPerMarketID(
             userDetails.UserID
           );
+          
+          console.log("stallData", stallData);
           if(Data?.status === 0){
             setDashboardData(Data?.data);
           }else {
@@ -358,13 +360,13 @@ export default function Dashboard() {
                             </Text> */}
                             <View style={[styles.activebox,  {backgroundColor: '#83b910d4'}]}>
                               <Text style={{ fontWeight: '600',fontSize:11}}>
-                               {`Active : ${50}`}
+                               {`Active : ${survey?.active_no_of_stalls}`}
                               </Text>
                             </View>
 
                             <View style={[styles.inactivebox, {backgroundColor: '#ef4444d0'}]}>
                               <Text style={{ fontWeight: '600',fontSize:11 }}>
-                               {`Inactive : ${50}`}
+                               {`Inactive : ${survey?.inactive_no_of_stalls}`}
                               </Text>
                             </View>
                           </View>

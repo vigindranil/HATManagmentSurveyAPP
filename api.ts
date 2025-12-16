@@ -257,7 +257,7 @@ export async function saveSurveyOnline(surveyData: any) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/saveSurveyDetails`
     : Constants?.expoConfig?.extra?.BASE_URL + `/saveSurveyDetails`;
-  // const url =`http://192.168.0.235:9991/api/user/saveSurveyDetails`
+  // const url =`http://192.168.0.236:9998/api/user/saveSurveyDetails`
 
   console.log(url);
 
@@ -286,7 +286,7 @@ export async function saveSurveyOnline(surveyData: any) {
         mobile: surveyData?.mobile || '',
         citizenship: surveyData?.citizenship || '',
         pin_code: parseInt(surveyData?.pin_code) || 0,
-        is_within_family: surveyData?.is_within_family || false,
+        is_within_family: (String(surveyData?.is_within_family) === "true" ? 1 : 0) || 0,
         transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
         document_type: surveyData?.documentTypes || '',
         pan: surveyData?.pan || '',
@@ -296,17 +296,17 @@ export async function saveSurveyOnline(surveyData: any) {
         property_tax_payment_to_year:
           parseInt(surveyData?.property_tax_payment_to_year) || 0,
         land_transfer_explanation: surveyData?.land_transfer_explanation || '',
-        occupy: surveyData?.occupy || false,
+        occupy: (String(surveyData?.occupy) === "true" ? 1 : 0) || 0,
         occupy_from_year: parseInt(surveyData?.occupy_from_year) || 0,
         present_occupier_name: surveyData?.present_occupier_name || '',
         occupier_guardian_name: surveyData?.occupier_guardian_name || '',
         adsr_name: surveyData?.adsr_name || '',
-        is_same_owner: surveyData?.is_same_owner || false,
+        is_same_owner: surveyData?.is_same_owner || 0,
         rented_to_whom: surveyData?.rented_to_whom || '',
         district_id: parseInt(surveyData?.district_id) || 0,
         police_station_id: parseInt(surveyData?.police_station_id) || 0,
         hat_id: parseInt(surveyData?.hat_id) || 0,
-        mouza_id: surveyData?.mouza_id || '',
+        mouza_id: parseInt(surveyData?.mouza_id) || 0,
         stall_no: surveyData?.stall_no || '',
         holding_no: surveyData?.holding_no || '',
         jl_no: surveyData?.jl_no || '',
@@ -321,6 +321,12 @@ export async function saveSurveyOnline(surveyData: any) {
           parseFloat(surveyData?.land_valuation_amount) || 0.0,
         user_id: parseInt(surveyData?.user_id) || 0,
         remarks: surveyData.remarks || '',
+        active_status: surveyData.statusType || "",
+        document_no: surveyData.documentNumber || "",
+        block_municipality_type: surveyData.block_or_municipality || "",
+        block_municipality_id: surveyData.block_municipality_id || "",
+        village_ward_id: surveyData.ward_id || "",
+        
       })
     );
 
@@ -472,12 +478,15 @@ export async function saveSurveyOnline(surveyData: any) {
       redirect: 'follow' as RequestRedirect,
     };
 
+    
+
     // const response = await fetch(
     //     'http://192.168.0.210:9998/api/user/saveSurveyDetails',
     //     requestOptions
     //   );
 
     const response = await fetch(url, requestOptions);
+    console.log('response', response);
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };

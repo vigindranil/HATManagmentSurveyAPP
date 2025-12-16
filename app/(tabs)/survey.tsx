@@ -390,6 +390,9 @@ export default function Survey() {
       statusMap[surveyData.applicationStatus as string];
 
     for (const field of currentStepData.fields) {
+      // ---------------------------------------------------------
+      // 1. VISIBILITY CHECKS (Skip hidden fields)
+      // ---------------------------------------------------------
       if (field.key === 'holding_no' && surveyData.licenseType !== '1')
         continue;
       if (field.key === 'stall_no' && surveyData.licenseType !== '2') continue;
@@ -398,7 +401,6 @@ export default function Survey() {
         continue;
       }
 
-      if (!field.required) continue;
       if (field.showFor && !field.showFor.includes(currentStatusString))
         continue;
       if (field.dependsOn) {
@@ -408,33 +410,47 @@ export default function Survey() {
         }
       }
 
-      let fieldLabel = field.label; // Default to 'Document Number'
+      // ---------------------------------------------------------
+      // 2. GET VALUE & CHECK IF EMPTY
+      // ---------------------------------------------------------
+      const rawValue = surveyData[field.key as keyof SurveyData];
+      const fieldValue = rawValue !== null && rawValue !== undefined ? String(rawValue) : '';
+      const hasValue = fieldValue.trim() !== '';
+
+      // *** CHANGE START ***
+      // If field is OPTIONAL and EMPTY, skip validation entirely.
+      if (!field.required && !hasValue) {
+        continue;
+      }
+      // *** CHANGE END ***
+
+      // ---------------------------------------------------------
+      // 3. DETERMINE LABEL (For Alerts)
+      // ---------------------------------------------------------
+      let fieldLabel = field.label; 
 
       if ((field.key === 'documentNumber' || field.key === 'document_image') && surveyData.documentTypes) {
         const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
         if (selectedDoc) {
           const suffix = field.key === 'document_image' ? ' Image' : ' Number';
-          fieldLabel = `${selectedDoc.value}${suffix}`; // Becomes 'Aadhar Number' or 'Voter ID Number'
+          fieldLabel = `${selectedDoc.value}${suffix}`; 
         }
       }
 
-       if (field.key === 'block_municipality_id') {
+      if (field.key === 'block_municipality_id') {
         if (surveyData.block_or_municipality === '1') fieldLabel = "Block Name";
         else if (surveyData.block_or_municipality === '2') fieldLabel = "Municipality Name";
       }
 
-      // 4. Dynamic Label for GP/Ward
       if (field.key === 'ward_id') {
         if (surveyData.block_or_municipality === '1') fieldLabel = "Gram Panchayat";
         else if (surveyData.block_or_municipality === '2') fieldLabel = "Ward No";
       }
 
-      const fieldValue = surveyData[field.key as keyof SurveyData] as string;
-      if (
-        fieldValue === null ||
-        fieldValue === undefined ||
-        fieldValue === ''
-      ) {
+      // ---------------------------------------------------------
+      // 4. REQUIRED FIELD CHECK
+      // ---------------------------------------------------------
+      if (field.required && !hasValue) {
         setAlertInfo({
           visible: true,
           type: 'Missing Information',
@@ -443,12 +459,13 @@ export default function Survey() {
         return false;
       }
 
+      // ---------------------------------------------------------
+      // 5. SPECIFIC VALIDATIONS (Runs for Required OR Optional-with-Value)
+      // ---------------------------------------------------------
 
-       if (field.key === 'documentNumber') {
-        const val = fieldValue ? fieldValue.trim() : '';
-
-        // 1. Aadhar Validation (Type '1')
-        // Rule: Must be exactly 12 numeric digits
+      if (field.key === 'documentNumber') {
+        const val = fieldValue.trim();
+        // 1. Aadhar Validation
         if (surveyData.documentTypes === '1') {
           const aadharRegex = /^[0-9]{12}$/;
           if (!aadharRegex.test(val)) {
@@ -460,11 +477,8 @@ export default function Survey() {
             return false;
           }
         }
-
-        // 2. Voter ID Validation (Type '2')
-        // Rule: Standard EPIC format is 3 Letters + 7 Digits (e.g., ABC1234567)
+        // 2. Voter ID Validation
         if (surveyData.documentTypes === '2') {
-          // Check for 3 letters followed by 7 digits
           const voterRegex = /^[A-Za-z]{3}[0-9]{7}$/;
           if (!voterRegex.test(val)) {
             setAlertInfo({
@@ -489,10 +503,10 @@ export default function Survey() {
         }
       }
 
-
+      // *** LAND VALUATION CHECK ***
       if (field.key === 'land_valuation_amount') {
-
         const amount = parseFloat(fieldValue);
+        
         if (isNaN(amount)) {
           setAlertInfo({
             visible: true,
@@ -531,21 +545,17 @@ export default function Survey() {
     if (validateStep()) {
       if (currentStep < steps.length - 1) {
 
-        // --- NEW LOGIC: Handling Step 0 Transitions ---
+        // --- EXISTING STEP 0 LOGIC ---
         if (currentStep === 0) {
           setSurveyData(prev => {
             const newData = { ...prev };
-
             const currentType = newData.licenseType;
             const currentStatus = newData.applicationStatus;
-            // Get the status/type that were active LAST time we moved forward
             const lastStatus = lastConfirmedStep0State.current.applicationStatus;
 
-            // 1. License Type Consistency (Always enforce this logic)
-            if (currentType === '1') delete newData['stall_no']; // Holding
-            if (currentType === '2') delete newData['holding_no']; // Stall
+            if (currentType === '1') delete newData['stall_no']; 
+            if (currentType === '2') delete newData['holding_no']; 
 
-            // 2. Application Status Logic
             const transferOnlyFields = [
               'is_within_family', 'transfer_relationship', 'land_transfer_explanation',
               'occupy', 'occupy_from_year', 'present_occupier_name', 'occupier_guardian_name',
@@ -558,43 +568,58 @@ export default function Survey() {
             const statusChanged = currentStatus !== lastStatus;
 
             if (statusChanged) {
-             
-              if (currentStatus === '1') { // New
-                // Wipe everything
+              if (currentStatus === '1') { 
                 transferOnlyFields.forEach(k => delete newData[k]);
                 sharedFields.forEach(k => delete newData[k]);
               } else {
-                // Existing (2) or Transfer (3)
-                // User switched status. Wipe the shared fields to force fresh entry.
                 sharedFields.forEach(k => delete newData[k]);
-                // If not Transfer, wipe transfer fields
                 if (currentStatus !== '3') {
                   transferOnlyFields.forEach(k => delete newData[k]);
                 }
               }
             } else {
-              if (currentStatus === '1') { // New - always clear just to be safe
+              if (currentStatus === '1') { 
                 transferOnlyFields.forEach(k => delete newData[k]);
                 sharedFields.forEach(k => delete newData[k]);
-              } else if (currentStatus === '2') { // Existing
-                // Just ensure Transfer fields are gone (in case they were filled in a different session)
+              } else if (currentStatus === '2') { 
                 transferOnlyFields.forEach(k => delete newData[k]);
               }
-              // If Transfer (3), we delete nothing. Persist all.
             }
-
             return newData;
           });
 
-          // Update the Ref so we know what the "current" valid state is for next time
           lastConfirmedStep0State.current = {
             licenseType: surveyData.licenseType as string,
             applicationStatus: surveyData.applicationStatus as string
           };
         }
 
+        // --- NEW: DATA CLEANUP FOR DEPENDENT FIELDS ---
+        // This runs on every step to ensure data consistency
+        setSurveyData(prev => {
+          const newData = { ...prev };
+
+          // 1. Cleanup for "Is Within Family"
+          // If user selected "No", remove the relationship data
+          if (newData.is_within_family === false) {
+            delete newData['transfer_relationship'];
+          }
+
+          // 2. Cleanup for "Is Property Occupied"
+          // If user selected "No", remove all occupier details
+          if (newData.occupy === false) {
+            delete newData['occupy_from_year'];
+            delete newData['present_occupier_name'];
+            delete newData['occupier_guardian_name'];
+            // If you have an address field for occupier, delete it here too
+          }
+
+          return newData;
+        });
+
         setCurrentStep(currentStep + 1);
       } else {
+        // --- SUBMISSION LOGIC ---
         setIsSaving(true);
         try {
           const response = await saveSurveyOnline(surveyData);
@@ -622,7 +647,6 @@ export default function Survey() {
         } catch (err) {
           const error = err as any;
           if (error.status === 401) {
-            // Show alert for unauthorized access
             setAlertInfo({
               visible: true,
               type: 'Unauthorized',
