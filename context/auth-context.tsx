@@ -88,9 +88,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login
   // --------------------------------------------------
   const login = async (token: string) => {
+    console.log('HI', token);
     if (!token) return;
     try {
       const decodedUser = jwtDecode<User>(token);
+      console.log('decodedUser', decodedUser);
       const fullUser = { ...decodedUser, token };
       setAuthToken(token);
       setUser(fullUser);

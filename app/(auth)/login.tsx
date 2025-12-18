@@ -76,9 +76,11 @@ export default function Login() {
     }).start();
     try {
       const userData = await authentication(username, password);
+      console.log('userDatas', userData);
 
       if (userData?.status === 0) {
         try {
+          console.log('userData', userData);
           await login(userData?.data?.access_token);
         } catch (e) {
           setError('Login failed. Please try again.');
