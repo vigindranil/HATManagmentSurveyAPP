@@ -655,6 +655,7 @@ export default function Survey() {
             });
             setNeedsRefresh(!needsRefresh);
             setMobileAutofillSuccessful(false);
+            setIsPanAutofilled(false);
           } else {
             setAlertInfo({
               visible: true,
