@@ -46,7 +46,7 @@ import *as Location from 'expo-location';
 import { useAuth } from '@/context/auth-context';
 import { router } from 'expo-router';
 import { compressImageUri } from '@/utils/compressImage'
-import {  yesNoOptions, documentTypes, transferRelationshipOptions,steps,licenseType, applicationStatus,applicationFor,usesType,numericFields,getMaxLength,statusType,blockOrMunicipalityType } from '../../constant/survey_constant';
+import { yesNoOptions, documentTypes, transferRelationshipOptions, steps, licenseType, applicationStatus, applicationFor, usesType, numericFields, getMaxLength, statusType, blockOrMunicipalityType } from '../../constant/survey_constant';
 
 
 type ImageFieldType = {
@@ -127,7 +127,7 @@ interface AlertInfo {
 }
 
 export default function Survey() {
-  
+
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [district, setDistrict] = useState([]);
@@ -136,9 +136,9 @@ export default function Survey() {
   const [user, setUser] = useState<any>(null);
   const [haatAllDetailsOptions, setHaatAllDetailsOptions] = useState([]);
   const [adsrOptions, setAdsrOptions] = useState([]);
-  const [jlNOOptions, setJlNOOptions] = useState([]); 
+  const [jlNOOptions, setJlNOOptions] = useState([]);
   const [mobileAutofillSuccessful, setMobileAutofillSuccessful] = useState(false);
-   const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
+  const [surveyData, setSurveyData] = useState<Partial<SurveyData>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [date, setDate] = useState(new Date()); // Correct useState for date
   const [showPicker, setShowPicker] = useState(false);
@@ -147,6 +147,7 @@ export default function Survey() {
   const [blockMunicipalityOptions, setBlockMunicipalityOptions] = useState([]);
   const [wardOptions, setWardOptions] = useState([]);
   const [rawBlockMuniList, setRawBlockMuniList] = useState<any[]>([]);
+  const [isPanAutofilled, setIsPanAutofilled] = useState(false);
 
   // NEW REF: Tracks the status/type that was active the last time the user successfully clicked "Next" on Step 0.
   const lastConfirmedStep0State = useRef<{ licenseType: string | null, applicationStatus: string | null }>({
@@ -162,9 +163,9 @@ export default function Survey() {
     context: undefined, // Initialize context
   });
   const { setUser: setUsers, setIsAuthenticated } = useAuth();
-  const { setNeedsRefresh } = useDashboard();
+  const { setNeedsRefresh, needsRefresh } = useDashboard();
 
-  console.log("surveyData",surveyData);
+  console.log("surveyData", surveyData);
 
 
   useEffect(() => {
@@ -193,17 +194,17 @@ export default function Survey() {
     }
   }, [currentStep]);
 
- 
 
-    useEffect(() => {
+
+  useEffect(() => {
     const showListener = Keyboard.addListener("keyboardDidShow", (e) => {
       setKeyboardVisible(true);
-      
+
     });
 
     const hideListener = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardVisible(false);
-     
+
     });
 
     return () => {
@@ -216,18 +217,18 @@ export default function Survey() {
     const fetchDistricts = async () => {
       try {
         const districtList = await getAllDistrictList();
-       if(districtList?.status === 0){
-        setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
-        updateField('district_id', '9');
-        handleDistrictChange(9);
-       }
-       else {
-        setAlertInfo({
-          visible: true,
-          type: 'Something went Wrong',
-          message: 'Something went wrong while fetching districts.',
-        }); 
-       }
+        if (districtList?.status === 0) {
+          setDistrict(formatDropdownData(districtList?.data || [], 'district_id', 'district_name'));
+          updateField('district_id', '9');
+          handleDistrictChange(9);
+        }
+        else {
+          setAlertInfo({
+            visible: true,
+            type: 'Something went Wrong',
+            message: 'Something went wrong while fetching districts.',
+          });
+        }
       } catch (err) {
         const error = err as any;
         if (error.status === 401) {
@@ -252,7 +253,7 @@ export default function Survey() {
       setSurveyData({ user_id: user ? String(user.UserID) : '', citizenship: 'Indian', district_id: '9' });
       setCurrentStep(0);
       lastConfirmedStep0State.current = { licenseType: null, applicationStatus: null };
-       handleDistrictChange('9'); 
+      handleDistrictChange('9');
     }
     // NEW: Handle unauthorized access context after alert dismissal
     if (alertInfo.context === 'unauthorized_access') {
@@ -264,7 +265,7 @@ export default function Survey() {
     }
   };
 
-  
+
   const updateField = (key: string, value: any) => {
     setSurveyData((prev) => {
       const prevValue = prev[key as keyof SurveyData];
@@ -278,7 +279,7 @@ export default function Survey() {
     });
   };
 
-  const processImage = async (fieldKey: string, location : boolean) => {
+  const processImage = async (fieldKey: string, location: boolean) => {
     Keyboard.dismiss();
     isCameraOpenRef.current = true;
     Alert.alert(
@@ -301,26 +302,26 @@ export default function Survey() {
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
                 const compressedUri = await compressImageUri(asset.uri);
-                if(location){
-                let latitude = asset.exif?.GPSLatitude;
-                let longitude = asset.exif?.GPSLongitude;
+                if (location) {
+                  let latitude = asset.exif?.GPSLatitude;
+                  let longitude = asset.exif?.GPSLongitude;
 
-                if (!latitude || !longitude) {
-                  const { status } =
-                    await Location.requestForegroundPermissionsAsync();
-                  if (status !== 'granted') {
-                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
-                    return;
+                  if (!latitude || !longitude) {
+                    const { status } =
+                      await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                      setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
+                      return;
+                    }
+                    const loc = await Location.getCurrentPositionAsync({});
+                    latitude = loc.coords.latitude;
+                    longitude = loc.coords.longitude;
                   }
-                  const loc = await Location.getCurrentPositionAsync({});
-                  latitude = loc.coords.latitude;
-                  longitude = loc.coords.longitude;
+                  updateField('latitude', String(latitude));
+                  updateField('longitude', String(longitude));
                 }
-                updateField('latitude', String(latitude));
-                updateField('longitude', String(longitude));
+                updateField(fieldKey, { uri: compressedUri });
               }
-              updateField(fieldKey, { uri: compressedUri });
-            }
             } catch (err) {
               console.error('Camera pick failed:', err);
             } finally {
@@ -346,26 +347,26 @@ export default function Survey() {
               if (!result.canceled && result.assets) {
                 const asset = result.assets[0];
                 const compressedUri = await compressImageUri(asset.uri);
-                if(Location){
-                let latitude = asset.exif?.GPSLatitude;
-                let longitude = asset.exif?.GPSLongitude;
+                if (Location) {
+                  let latitude = asset.exif?.GPSLatitude;
+                  let longitude = asset.exif?.GPSLongitude;
 
-                if (!latitude || !longitude) {
-                  const { status } =
-                    await Location.requestForegroundPermissionsAsync();
-                  if (status !== 'granted') {
-                    setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
-                    return;
+                  if (!latitude || !longitude) {
+                    const { status } =
+                      await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                      setAlertInfo({ visible: true, type: 'Permission Denied', message: 'Location permission is required.' });
+                      return;
+                    }
+                    const loc = await Location.getCurrentPositionAsync({});
+                    latitude = loc.coords.latitude;
+                    longitude = loc.coords.longitude;
                   }
-                  const loc = await Location.getCurrentPositionAsync({});
-                  latitude = loc.coords.latitude;
-                  longitude = loc.coords.longitude;
+                  updateField('latitude', String(latitude));
+                  updateField('longitude', String(longitude));
                 }
-                updateField('latitude', String(latitude));
-                updateField('longitude', String(longitude));
+                updateField(fieldKey, { uri: compressedUri });
               }
-              updateField(fieldKey, { uri: compressedUri });
-            }
             } catch (err) {
               console.error('Gallery pick failed:', err);
             } finally {
@@ -427,13 +428,13 @@ export default function Survey() {
       // ---------------------------------------------------------
       // 3. DETERMINE LABEL (For Alerts)
       // ---------------------------------------------------------
-      let fieldLabel = field.label; 
+      let fieldLabel = field.label;
 
       if ((field.key === 'documentNumber' || field.key === 'document_image') && surveyData.documentTypes) {
         const selectedDoc = documentTypes.find(d => d.key === String(surveyData.documentTypes));
         if (selectedDoc) {
           const suffix = field.key === 'document_image' ? ' Image' : ' Number';
-          fieldLabel = `${selectedDoc.value}${suffix}`; 
+          fieldLabel = `${selectedDoc.value}${suffix}`;
         }
       }
 
@@ -479,15 +480,32 @@ export default function Survey() {
         }
         // 2. Voter ID Validation
         if (surveyData.documentTypes === '2') {
-          const voterRegex = /^[A-Za-z]{3}[0-9]{7}$/;
-          if (!voterRegex.test(val)) {
-            setAlertInfo({
-              visible: true,
-              type: 'Invalid Format',
-              message: 'Invalid Voter ID. Format should be 3 letters followed by 7 digits (e.g., ABC1234567).',
-            });
-            return false;
-          }
+
+          // NEW EPIC: ABC1234567
+           const value = val.trim();
+
+         if (value.length < 10) {
+    setAlertInfo({
+      visible: true,
+      type: 'Invalid Format',
+      message:
+        'Invalid Voter ID.',
+    });
+    return false;
+  }
+        }
+      }
+
+
+      if (field.key === 'pin_code') {
+        const pinRegex = /^[0-9]{6}$/;
+        if (!pinRegex.test(fieldValue)) {
+          setAlertInfo({
+            visible: true,
+            type: 'Invalid',
+            message: 'Invalid PIN code. It must be exactly 6 digits.',
+          });
+          return false;
         }
       }
 
@@ -506,7 +524,7 @@ export default function Survey() {
       // *** LAND VALUATION CHECK ***
       if (field.key === 'land_valuation_amount') {
         const amount = parseFloat(fieldValue);
-        
+
         if (isNaN(amount)) {
           setAlertInfo({
             visible: true,
@@ -553,8 +571,8 @@ export default function Survey() {
             const currentStatus = newData.applicationStatus;
             const lastStatus = lastConfirmedStep0State.current.applicationStatus;
 
-            if (currentType === '1') delete newData['stall_no']; 
-            if (currentType === '2') delete newData['holding_no']; 
+            if (currentType === '1') delete newData['stall_no'];
+            if (currentType === '2') delete newData['holding_no'];
 
             const transferOnlyFields = [
               'is_within_family', 'transfer_relationship', 'land_transfer_explanation',
@@ -568,7 +586,7 @@ export default function Survey() {
             const statusChanged = currentStatus !== lastStatus;
 
             if (statusChanged) {
-              if (currentStatus === '1') { 
+              if (currentStatus === '1') {
                 transferOnlyFields.forEach(k => delete newData[k]);
                 sharedFields.forEach(k => delete newData[k]);
               } else {
@@ -578,10 +596,10 @@ export default function Survey() {
                 }
               }
             } else {
-              if (currentStatus === '1') { 
+              if (currentStatus === '1') {
                 transferOnlyFields.forEach(k => delete newData[k]);
                 sharedFields.forEach(k => delete newData[k]);
-              } else if (currentStatus === '2') { 
+              } else if (currentStatus === '2') {
                 transferOnlyFields.forEach(k => delete newData[k]);
               }
             }
@@ -623,7 +641,7 @@ export default function Survey() {
         setIsSaving(true);
         try {
           const response = await saveSurveyOnline(surveyData);
-          const messages = 
+          const messages =
             response.status === 0
               ? `Survey submitted successfully! Your application number is ${response?.data?.applicationNumber}`
               : 'Survey submission failed. Please try again.';
@@ -635,14 +653,14 @@ export default function Survey() {
               message: messages,
               context: 'survey_submission',
             });
-            setNeedsRefresh(true);
+            setNeedsRefresh(!needsRefresh);
             setMobileAutofillSuccessful(false);
           } else {
             setAlertInfo({
               visible: true,
               type: 'Something went Wrong',
               message: messages,
-            });                        
+            });
           }
         } catch (err) {
           const error = err as any;
@@ -676,14 +694,14 @@ export default function Survey() {
   };
 
 
-   const handleBlockTypeChange = async (type: string) => {
+  const handleBlockTypeChange = async (type: string) => {
     // 1. Update the type
     updateField('block_or_municipality', type);
 
     // 2. Clear children fields
     updateField('block_municipality_id', '');
     updateField('ward_id', '');
-    
+
     // 3. Clear children options
     setBlockMunicipalityOptions([]);
     setWardOptions([]);
@@ -692,8 +710,8 @@ export default function Survey() {
 
     // We need a district selected before fetching blocks/munis
     if (!districtId) {
-       setAlertInfo({ visible: true, type: 'Missing Information', message: 'Please select a District first.' });
-       return; 
+      setAlertInfo({ visible: true, type: 'Missing Information', message: 'Please select a District first.' });
+      return;
     }
 
     try {
@@ -702,9 +720,9 @@ export default function Survey() {
         // User selected BLOCK -> Fetch Blocks
         response = await getBlocksOrMunicipalitiesByDistrictId(Number(districtId), Number(type));
         if (response?.status === 0) {
-            // Assuming API returns id: block_id, name: block_name
-            setRawBlockMuniList(response?.data);
-            setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
+          // Assuming API returns id: block_id, name: block_name
+          setRawBlockMuniList(response?.data);
+          setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
         }
         else {
           setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
@@ -713,9 +731,9 @@ export default function Survey() {
         // User selected MUNICIPALITY -> Fetch Municipalities
         response = await getBlocksOrMunicipalitiesByDistrictId(Number(districtId), Number(type));
         if (response?.status === 0) {
-            // Assuming API returns id: municipality_id, name: municipality_name
-            setRawBlockMuniList(response?.data);
-            setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
+          // Assuming API returns id: municipality_id, name: municipality_name
+          setRawBlockMuniList(response?.data);
+          setBlockMunicipalityOptions(formatDropdownData(response.data || [], 'boundary_id', 'boundary_name'));
         }
         else {
           setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
@@ -724,21 +742,21 @@ export default function Survey() {
     } catch (err) {
 
       const error = err as any;
-        if (error.status === 401) {
-          // Show alert for unauthorized access
-          setAlertInfo({
-            visible: true,
-            type: 'Unauthorized',
-            message: 'Your session has expired. Please log in again.',
-            context: 'unauthorized_access',
-          });
-        } else {
-          console.error('Error fetching districts:', error.message);
-          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
-        }
-      
-     
-      
+      if (error.status === 401) {
+        // Show alert for unauthorized access
+        setAlertInfo({
+          visible: true,
+          type: 'Unauthorized',
+          message: 'Your session has expired. Please log in again.',
+          context: 'unauthorized_access',
+        });
+      } else {
+        console.error('Error fetching districts:', error.message);
+        setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch block/municipality data.' });
+      }
+
+
+
     }
   };
 
@@ -747,7 +765,7 @@ export default function Survey() {
   // 2. Handles selection of a specific Block or Municipality
   const handleBlockMunicipalityIdChange = async (selectedId: string) => {
     updateField('block_municipality_id', selectedId);
-    
+
     // Reset Child (Ward/GP)
     updateField('ward_id', '');
     setWardOptions([]);
@@ -771,24 +789,24 @@ export default function Survey() {
       if (type === '1') {
         // Fetch GPs (Pass ID and Level ID if API requires it)
         // Assuming your API function accepts levelId as 2nd param
-        response = await getBoundaryDetailsByBoundaryID(Number(levelId), Number(selectedId), 0, Number(user?.UserID)); 
-        
+        response = await getBoundaryDetailsByBoundaryID(Number(levelId), Number(selectedId), 0, Number(user?.UserID));
+
         if (response?.status === 0) {
-            // Adjust mapping based on GP API response structure
-            setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
-        }else {
+          // Adjust mapping based on GP API response structure
+          setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
+        } else {
           setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward data.' });
         }
       } else {
         // Fetch Wards (Pass ID and Level ID)
         response = await getBoundaryDetailsByBoundaryID(Number(levelId), Number(selectedId), 0, Number(user?.UserID));
-        
+
         if (response?.status === 0) {
-             // Adjust mapping based on Ward API response structure
-            setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
-          }else {
-            setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward data.' });
-          }
+          // Adjust mapping based on Ward API response structure
+          setWardOptions(formatDropdownData(response.data || [], 'inner_boundary_id', 'inner_boundary_name'));
+        } else {
+          setAlertInfo({ visible: true, type: 'Something went Wrong', message: 'Failed to fetch GP/Ward data.' });
+        }
       }
     } catch (err) {
       const error = err as any;
@@ -843,24 +861,24 @@ export default function Survey() {
         getPoliceStationsByDistrictId(districtId),
         getAllHaatDetailsByDistrictID(districtId),
       ]);
-      if(haatDetails?.status === 0){
-      setHaatAllDetailsOptions(formatDropdownData(haatDetails?.data || [], 'haat_id', 'haat_name'));
-      }else {
+      if (haatDetails?.status === 0) {
+        setHaatAllDetailsOptions(formatDropdownData(haatDetails?.data || [], 'haat_id', 'haat_name'));
+      } else {
         setAlertInfo({
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching haat details.',
-        }); 
+        });
       }
-      if(policeStations?.status === 0){
-      setPoliceStationOptions(formatDropdownData(policeStations?.data || [], 'thana_id', 'thana_name'));
-      }else {
+      if (policeStations?.status === 0) {
+        setPoliceStationOptions(formatDropdownData(policeStations?.data || [], 'thana_id', 'thana_name'));
+      } else {
         setAlertInfo({
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching police stations.',
-         
-        }); 
+
+        });
       }
 
 
@@ -881,7 +899,7 @@ export default function Survey() {
     }
   };
 
-  
+
 
   const handlePoliceStationChange = async (selectedKey: any) => {
     const thanaId = String(selectedKey);
@@ -908,39 +926,39 @@ export default function Survey() {
         getAdsrByThanaId(thanaId),
         getJlNoByThanaId(thanaId)
       ]);
-      if(mouzaList?.status === 0){
-      setMouzaOptions(formatDropdownData(mouzaList?.data || [], 'mouza_id', 'mouza_name'));
-      }else {
+      if (mouzaList?.status === 0) {
+        setMouzaOptions(formatDropdownData(mouzaList?.data || [], 'mouza_id', 'mouza_name'));
+      } else {
         setAlertInfo({
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching mouza list.',
-        }); 
+        });
       }
-      if(adsrList?.status === 0){
-      const formattedAdsrData = formatDropdownData(adsrList?.data || [], 'adsr_name', 'adsr_name');
-    
-      setAdsrOptions(formattedAdsrData);
-      }else {
+      if (adsrList?.status === 0) {
+        const formattedAdsrData = formatDropdownData(adsrList?.data || [], 'adsr_name', 'adsr_name');
+
+        setAdsrOptions(formattedAdsrData);
+      } else {
         setAlertInfo({
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching adsr list.',
-         
-        }); 
+
+        });
       }
-      if(jlNoData?.status === 0){
-      // Format JL No data and set its options
-      const formattedJlNOData = formatDropdownData(jlNoData?.data || [], 'jl_no', 'jl_no');
-        
-      setJlNOOptions(formattedJlNOData);
-      }else {
+      if (jlNoData?.status === 0) {
+        // Format JL No data and set its options
+        const formattedJlNOData = formatDropdownData(jlNoData?.data || [], 'jl_no', 'jl_no');
+
+        setJlNOOptions(formattedJlNOData);
+      } else {
         setAlertInfo({
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching JL No list.',
-         
-        }); 
+
+        });
       }
     } catch (err) {
       const error = err as any;
@@ -957,13 +975,13 @@ export default function Survey() {
           visible: true,
           type: 'Something went Wrong',
           message: 'Something went wrong while fetching mouza, ADSR, or JL No data.',
-         
-        }); 
+
+        });
       }
     }
   };
 
-const renderField = (field: any) => {
+  const renderField = (field: any) => {
     // ============================================================
     // 1. VISIBILITY & HIDING CHECKS
     // ============================================================
@@ -987,7 +1005,7 @@ const renderField = (field: any) => {
     // >>> WATERFALL VISIBILITY LOGIC <<<
     // 1. Hide "Block/Muni Name" until "Type" (Block/Municipality) is selected
     if (field.key === 'block_municipality_id' && !surveyData.block_or_municipality) return null;
-    
+
     // 2. Hide "GP/Ward" until "Type" is selected
     if (field.key === 'ward_id' && !surveyData.block_or_municipality) return null;
 
@@ -1033,7 +1051,7 @@ const renderField = (field: any) => {
     };
 
     if (
-      (dropdownDataMap[field.key] || field.type === 'dropdown') && 
+      (dropdownDataMap[field.key] || field.type === 'dropdown') &&
       !['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id', 'ward_id'].includes(field.key)
     ) {
       const data = dropdownDataMap[field.key] || yesNoOptions;
@@ -1064,7 +1082,7 @@ const renderField = (field: any) => {
       // Dynamic Key to reset Block/Muni Type when District changes
       let standardDropdownKey = field.key;
       if (field.key === 'block_or_municipality') {
-          standardDropdownKey = `${field.key}-${surveyData.district_id || 'none'}`;
+        standardDropdownKey = `${field.key}-${surveyData.district_id || 'none'}`;
       }
 
       return (
@@ -1074,11 +1092,11 @@ const renderField = (field: any) => {
           </Text>
           <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6' }]}>
             {lockedLabel ? (
-               <TextInput style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10 }]} value={lockedLabel} editable={false} />
+              <TextInput style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10 }]} value={lockedLabel} editable={false} />
             ) : isDisabled ? (
-               <View style={{ padding: 16, justifyContent: 'center' }}>
-                 <Text style={{ color: '#9CA3AF', fontSize: 16 }}>{disabledPlaceholder}</Text>
-               </View>
+              <View style={{ padding: 16, justifyContent: 'center' }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 16 }}>{disabledPlaceholder}</Text>
+              </View>
             ) : (
               <SelectList
                 key={standardDropdownKey}
@@ -1087,7 +1105,7 @@ const renderField = (field: any) => {
                   const finalValue = v === 'true' ? true : v === 'false' ? false : String(v);
 
                   if (field.key === 'block_or_municipality') {
-                    handleBlockTypeChange(finalValue); 
+                    handleBlockTypeChange(finalValue);
                   } else {
                     if (field.key === 'documentTypes' && surveyData.documentTypes !== finalValue) {
                       updateField('document_image', null); updateField('documentNumber', null);
@@ -1095,7 +1113,7 @@ const renderField = (field: any) => {
                     if (field.key === 'licenseType' && finalValue === '2') updateField('usesType', '1');
                     if (field.key === 'licenseType' && finalValue !== '2') updateField('usesType', '');
                     if (field.key === 'applicationStatus') updateField('applicationFor', (finalValue === '1' || finalValue === '2') ? '1' : '');
-                    
+
                     updateField(field.key, finalValue);
                   }
                 }}
@@ -1120,11 +1138,11 @@ const renderField = (field: any) => {
     // 4. DEPENDENT / API DROPDOWNS
     // ============================================================
     if (['district_id', 'police_station_id', 'mouza_id', 'hat_id', 'adsr_name', 'jl_no', 'block_municipality_id', 'ward_id'].includes(field.key)) {
-      
+
       let data: any[] = [];
       let isDisabled = false;
       let disabledPlaceholder = "";
-      
+
       let currentFieldHandler = (val: any) => {
         let v = typeof val === 'object' && 'key' in val ? val.key : val;
         updateField(field.key, String(v));
@@ -1132,21 +1150,21 @@ const renderField = (field: any) => {
 
       // A. Block / Municipality Name 
       if (field.key === 'block_municipality_id') {
-        data = blockMunicipalityOptions; 
+        data = blockMunicipalityOptions;
         currentFieldHandler = (val: any) => {
-           let v = typeof val === 'object' && 'key' in val ? val.key : val;
-           handleBlockMunicipalityIdChange(String(v));
+          let v = typeof val === 'object' && 'key' in val ? val.key : val;
+          handleBlockMunicipalityIdChange(String(v));
         };
       }
-      
+
       // B. GP / Ward 
       else if (field.key === 'ward_id') {
-        data = wardOptions; 
+        data = wardOptions;
         // Disable if Parent Name is not selected
         if (!surveyData.block_municipality_id) {
-           isDisabled = true;
-           const parentNameLabel = surveyData.block_or_municipality === '1' ? "Block Name" : "Municipality Name";
-           disabledPlaceholder = `Select ${parentNameLabel} first`;
+          isDisabled = true;
+          const parentNameLabel = surveyData.block_or_municipality === '1' ? "Block Name" : "Municipality Name";
+          disabledPlaceholder = `Select ${parentNameLabel} first`;
         }
       }
 
@@ -1154,20 +1172,20 @@ const renderField = (field: any) => {
       else if (field.key === 'district_id') {
         data = district;
         currentFieldHandler = (val: any) => {
-           let v = typeof val === 'object' && 'key' in val ? val.key : val;
-           handleDistrictChange(String(v));
+          let v = typeof val === 'object' && 'key' in val ? val.key : val;
+          handleDistrictChange(String(v));
         };
         // >>> LOCK DISTRICT ALWAYS (As requested) <<<
-        isDisabled = true; 
+        isDisabled = true;
       }
-      
+
       // D. Other Fields
       else if (field.key === 'police_station_id') {
         data = policeStationOptions;
         if (!surveyData.district_id) { isDisabled = true; disabledPlaceholder = "Select District first"; }
         currentFieldHandler = (val: any) => {
-           let v = typeof val === 'object' && 'key' in val ? val.key : val;
-           handlePoliceStationChange(String(v));
+          let v = typeof val === 'object' && 'key' in val ? val.key : val;
+          handlePoliceStationChange(String(v));
         };
       }
       else if (field.key === 'hat_id') {
@@ -1183,29 +1201,29 @@ const renderField = (field: any) => {
 
       // 1. Find the Selected Object & Locked Label Logic
       let defaultOptionObj = undefined;
-      let lockedLabel = ""; 
+      let lockedLabel = "";
 
       if (value !== null && value !== undefined) {
         const strVal = String(value);
         const foundItem = data.find(item => item.key === strVal);
-        
+
         if (foundItem) {
-            defaultOptionObj = { key: strVal, value: foundItem.value };
-            lockedLabel = foundItem.value; 
-        } 
+          defaultOptionObj = { key: strVal, value: foundItem.value };
+          lockedLabel = foundItem.value;
+        }
       }
 
       // 2. Unique Key Generation
       // Ensures the component re-renders when parents change, but NOT when it selects its own value (prevents bugs)
       let selectListKey = `${field.key}`;
       if (field.key === 'block_municipality_id') {
-         selectListKey = `${field.key}-${surveyData.district_id}-${surveyData.block_or_municipality}`;
+        selectListKey = `${field.key}-${surveyData.district_id}-${surveyData.block_or_municipality}`;
       } else if (field.key === 'ward_id') {
-         selectListKey = `${field.key}-${surveyData.block_municipality_id}`;
+        selectListKey = `${field.key}-${surveyData.block_municipality_id}`;
       } else if (['mouza_id', 'hat_id', 'adsr_name', 'jl_no'].includes(field.key)) {
-         selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
+        selectListKey = `${field.key}-${surveyData.police_station_id || 'none'}`;
       } else if (field.key === 'police_station_id') {
-         selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
+        selectListKey = `${field.key}-${surveyData.district_id || 'none'}`;
       }
 
       return (
@@ -1214,14 +1232,14 @@ const renderField = (field: any) => {
             {displayLabel} {field.required && <Text style={styles.required}>*</Text>}
           </Text>
           <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }]}>
-            
+
             {/* SHOW TEXT INPUT IF DISABLED & LOCKED LABEL EXISTS (e.g. "JALPAIGURI") */}
             {isDisabled && lockedLabel ? (
-                <TextInput 
-                    style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10, fontWeight:'600' }]} 
-                    value={lockedLabel} 
-                    editable={false} 
-                />
+              <TextInput
+                style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10, fontWeight: '600' }]}
+                value={lockedLabel}
+                editable={false}
+              />
             ) : isDisabled ? (
               <View style={{ paddingHorizontal: 16, paddingVertical: 14, justifyContent: 'center' }}>
                 <Text style={{ color: '#9CA3AF', fontSize: 16, fontWeight: '400' }}>{disabledPlaceholder || "Loading..."}</Text>
@@ -1251,38 +1269,38 @@ const renderField = (field: any) => {
     // 5. IMAGE PICKERS
     // ============================================================
     if (field.type === 'image' || field.type === 'images') {
-        const isMulti = field.type === 'images';
-        const imageValue = typeof value === 'object' && value !== null && 'uri' in value ? (value as ImageFieldType) : undefined;
-        return (
-            <View key={field.key} style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_image') && <Text style={styles.required}>*</Text>}</Text>
-            <TouchableOpacity style={styles.imagePickerButton} onPress={() => processImage(field.key, isMulti)}>
-                {loadingImage === field.key ? ( <View style={styles.imagePreviewContainer}><ActivityIndicator size="large" color="#2563EB" /></View> ) 
-                : imageValue?.uri ? (
+      const isMulti = field.type === 'images';
+      const imageValue = typeof value === 'object' && value !== null && 'uri' in value ? (value as ImageFieldType) : undefined;
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_image') && <Text style={styles.required}>*</Text>}</Text>
+          <TouchableOpacity style={styles.imagePickerButton} onPress={() => processImage(field.key, isMulti)}>
+            {loadingImage === field.key ? (<View style={styles.imagePreviewContainer}><ActivityIndicator size="large" color="#2563EB" /></View>)
+              : imageValue?.uri ? (
                 <View style={styles.imagePreviewContainer}>
-                    <Image source={{ uri: imageValue.uri }} style={styles.imagePreview} />
-                    <TouchableOpacity style={styles.removeImageButton} onPress={() => updateField(field.key, null)}><XCircle size={28} color="#DC2626" fill="#ffffff" /></TouchableOpacity>
-                </View> ) 
-                : ( <Text style={styles.imagePickerText}>{field.placeholder}</Text> )}
-            </TouchableOpacity>
-            </View>
-        );
+                  <Image source={{ uri: imageValue.uri }} style={styles.imagePreview} />
+                  <TouchableOpacity style={styles.removeImageButton} onPress={() => updateField(field.key, null)}><XCircle size={28} color="#DC2626" fill="#ffffff" /></TouchableOpacity>
+                </View>)
+                : (<Text style={styles.imagePickerText}>{field.placeholder}</Text>)}
+          </TouchableOpacity>
+        </View>
+      );
     }
 
     // ============================================================
     // 6. DATE PICKER
     // ============================================================
     if (field.type === 'date') {
-        return (
-            <View key={field.key} style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>{field.label} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date') && <Text style={styles.required}>*</Text>}</Text>
-                <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowPicker(true)}>
-                    <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
-                    <Text style={{ color: '#111827', fontSize: 16 }}>{value ? new Date(value as string).toLocaleDateString() : 'Select Date'}</Text>
-                </TouchableOpacity>
-                {showPicker && (<DateTimePicker value={value ? new Date(value as string) : date} mode="date" display="default" onChange={(e, d) => { setShowPicker(false); if (d) updateField(field.key, d.toISOString().split('T')[0]); }} />)}
-            </View>
-        );
+      return (
+        <View key={field.key} style={styles.fieldContainer}>
+          <Text style={styles.fieldLabel}>{field.label} {field.required && !(currentStatusString === 'transfer' && field.key === 'license_expiry_date') && <Text style={styles.required}>*</Text>}</Text>
+          <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowPicker(true)}>
+            <Calendar color="#6B7280" size={20} style={{ marginRight: 10 }} />
+            <Text style={{ color: '#111827', fontSize: 16 }}>{value ? new Date(value as string).toLocaleDateString() : 'Select Date'}</Text>
+          </TouchableOpacity>
+          {showPicker && (<DateTimePicker value={value ? new Date(value as string) : date} mode="date" display="default" onChange={(e, d) => { setShowPicker(false); if (d) updateField(field.key, d.toISOString().split('T')[0]); }} />)}
+        </View>
+      );
     }
 
     // ============================================================
@@ -1290,55 +1308,86 @@ const renderField = (field: any) => {
     // ============================================================
     const isEditable = field.key !== 'user_id' && field.key !== 'citizenship';
     const isAutoFilledField = ['name', 'guardian_name', 'address', 'pin_code', 'pan'].includes(field.key);
-    const isDisabledByAutoFill = isAutoFilledField && mobileAutofillSuccessful;
-    
+    let isDisabledByAutoFill = false;
+
+if (field.key === 'pan') {
+  // Only disable PAN if it was specifically autofilled with data
+  isDisabledByAutoFill = isPanAutofilled;
+} else if (isAutoFilledField) {
+  // For other fields (Name, Address, etc.), keep existing logic
+  isDisabledByAutoFill = mobileAutofillSuccessful;
+}
+
     let fieldMaxLength = getMaxLength(field.key);
-    if (field.key === 'documentNumber') fieldMaxLength = surveyData.documentTypes === '1' ? 12 : 10;
-    
+    if (field.key === 'documentNumber') fieldMaxLength = surveyData.documentTypes === '1' ? 12 : 20;
+
     const isNumericKeyboard = numericFields.includes(field.key) || (field.key === 'documentNumber' && surveyData.documentTypes === '1');
     let fieldYPosition = 0;
 
     return (
-        <View key={field.key} style={styles.fieldContainer} onLayout={(event) => { fieldYPosition = event.nativeEvent.layout.y; }}>
-            <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}</Text>
-            <View style={[styles.inputContainer, (!isEditable || isDisabledByAutoFill) && { backgroundColor: '#F3F4F6' }]}>
-            <TextInput
-                style={[styles.textInput, (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline]}
-                value={(value as string) || ''}
-                placeholder={field.placeholder}
-                editable={isEditable && !isDisabledByAutoFill}
-                placeholderTextColor="#9CA3AF"
-                keyboardType={isNumericKeyboard ? 'numeric' : 'default'}
-                maxLength={fieldMaxLength}
-                autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
-                multiline={field.multiline || field.key === 'land_transfer_explanation'}
-                numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
-                onFocus={() => { if (fieldYPosition > 0) { setTimeout(() => { scrollViewRef.current?.scrollTo({ y: fieldYPosition - 100, animated: true }); }, 100); } }}
-                onChangeText={(text) => {
-                updateField(field.key, text);
-                if (field.key === 'mobile') {
-                    if (text.length === 10) {
-                        getUserDetailsByPhoneNumber(text).then(response => {
-                            if (response?.data && response?.status === 0) {
-                                setMobileAutofillSuccessful(true);
-                                if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
-                                if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
-                                if (!surveyData.address) updateField('address', response.data.address || '');
-                                if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
-                                if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
-                                setAlertInfo({ visible: true, type: 'Autofill Successful', message: 'User details autofilled!', context: 'autofill_success' });
-                            } else {
-                                setMobileAutofillSuccessful(false);
-                                ['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, ''));
-                                setAlertInfo({ visible: true, type: 'User Not Found', message: 'No existing user found.' });
-                            }
-                        }).catch(() => { setMobileAutofillSuccessful(false); ['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, '')); });
-                    } else if (text.length < 10) { setMobileAutofillSuccessful(false); }
-                }
-                }}
-            />
-            </View>
+      <View key={field.key} style={styles.fieldContainer} onLayout={(event) => { fieldYPosition = event.nativeEvent.layout.y; }}>
+        <Text style={styles.fieldLabel}>{displayLabel} {field.required && !(currentStatusString === 'transfer' && (field.key === 'previous_license_no' || field.key === 'license_expiry_date' || field.key === "property_tax_payment_to_year")) && <Text style={styles.required}>*</Text>}</Text>
+        <View style={[styles.inputContainer, (!isEditable || isDisabledByAutoFill) && { backgroundColor: '#F3F4F6' }]}>
+          <TextInput
+            style={[styles.textInput, (field.multiline || field.key === 'land_transfer_explanation') && styles.textInputMultiline]}
+            value={(value as string) || ''}
+            placeholder={field.placeholder}
+            editable={isEditable && !isDisabledByAutoFill}
+            placeholderTextColor="#9CA3AF"
+            keyboardType={isNumericKeyboard ? 'numeric' : 'default'}
+            maxLength={fieldMaxLength}
+            autoCapitalize={field.key === 'pan' ? 'characters' : 'sentences'}
+            multiline={field.multiline || field.key === 'land_transfer_explanation'}
+            numberOfLines={field.multiline || field.key === 'land_transfer_explanation' ? 4 : 1}
+            onFocus={() => { if (fieldYPosition > 0) { setTimeout(() => { scrollViewRef.current?.scrollTo({ y: fieldYPosition - 100, animated: true }); }, 100); } }}
+            onChangeText={(text) => {
+              updateField(field.key, text);
+              if (field.key === 'mobile') {
+                if (text.length === 10) {
+                  getUserDetailsByPhoneNumber(text).then(response => {
+                    if (response?.data && response?.status === 0) {
+                      setMobileAutofillSuccessful(true);
+                      if (!surveyData.name) updateField('name', response.data.shop_owner_name || '');
+                      if (!surveyData.guardian_name) updateField('guardian_name', response.data.guardian_name || '');
+                      if (!surveyData.address) updateField('address', response.data.address || '');
+                      if (!surveyData.pin_code) updateField('pin_code', response.data.pin_code || '');
+                      // if (!surveyData.pan) updateField('pan', response.data.pan_number || '');
+
+                       if (response.data.pan_number) {
+            updateField('pan', response.data.pan_number);
+            setIsPanAutofilled(true); // LOCK the field
+          } else {
+            // Ensure it is empty and UNLOCK the field
+            updateField('pan', ''); 
+            setIsPanAutofilled(false);
+          }
+
+
+
+
+
+                      setAlertInfo({ visible: true, type: 'Autofill Successful', message: 'User details autofilled!', context: 'autofill_success' });
+                    } else {
+                      setMobileAutofillSuccessful(false);
+                      setIsPanAutofilled(false); // Reset PAN lock on error
+                      ['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, ''));
+                      setAlertInfo({ visible: true, type: 'User Not Found', message: 'No existing user found.' });
+                    }
+                  }).catch(() => { setMobileAutofillSuccessful(false);['name', 'guardian_name', 'address', 'pin_code', 'pan'].forEach(k => updateField(k, '')); });
+                } else if (text.length < 10) { 
+                  setMobileAutofillSuccessful(false); 
+                  setIsPanAutofilled(false);
+                  updateField('pan', '');
+                  updateField('name', '');
+                  updateField('guardian_name', '');
+                  updateField('address', '');
+                  updateField('pin_code', ''); 
+                  }
+              }
+            }}
+          />
         </View>
+      </View>
     );
   };
 
@@ -1391,13 +1440,13 @@ const renderField = (field: any) => {
   return (
     <View style={{ flex: 1 }}>
       <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-       
+
         {alertInfo.visible && (
           <CustomAlert
             type={alertInfo.type}
             message={alertInfo.message}
             onConfirm={handleAlertConfirm}
-            // onCancel={() => { }}
+          // onCancel={() => { }}
           />
         )}
         <LinearGradient
@@ -1445,7 +1494,7 @@ const renderField = (field: any) => {
         {/* 3. Step Indicator is also moved OUTSIDE KeyboardAvoidingView */}
         <View style={styles.stepIndicatorContainer}>{renderStepIndicator()}</View>
 
-      
+
         {Platform.OS === 'ios' ? (
           <KeyboardAvoidingView
             behavior="padding"
@@ -1471,24 +1520,24 @@ const renderField = (field: any) => {
             style={{ flex: 1 }}
             keyboardVerticalOffset={0}
           >
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              ref={scrollViewRef}
-              style={styles.formContainer}
-              contentContainerStyle={{
-                paddingBottom: keyboardVisible ? 40 : 110
-              }}
-              keyboardShouldPersistTaps="handled"
-            >
-              <View style={styles.formContent}>
-                {currentStepData.fields.map(renderField)}
-              </View>
-            </ScrollView>
-          </View>
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                ref={scrollViewRef}
+                style={styles.formContainer}
+                contentContainerStyle={{
+                  paddingBottom: keyboardVisible ? 40 : 110
+                }}
+                keyboardShouldPersistTaps="handled"
+              >
+                <View style={styles.formContent}>
+                  {currentStepData.fields.map(renderField)}
+                </View>
+              </ScrollView>
+            </View>
           </KeyboardAvoidingView>
         )}
       </SafeAreaView>
-      
+
 
       {/* 
         5. Button Container (footer) OUTSIDE SafeAreaView 

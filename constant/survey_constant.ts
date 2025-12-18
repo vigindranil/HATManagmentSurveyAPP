@@ -126,7 +126,7 @@
         {
           key: 'documentNumber',
           label: 'Document Number',
-          required: true,
+          required: false,
           placeholder: 'Enter document number',
           showFor: ['new', 'existing', 'transfer'],
         },
@@ -141,7 +141,7 @@
         {
           key: 'pan',
           label: 'PAN',
-          required: true,
+          required: false,
           placeholder: 'Enter PAN number',
           showFor: ['new', 'existing', 'transfer'],
         },
@@ -356,13 +356,13 @@
         {
           key: 'stall_no',
           label: 'Stall No',
-          required: true,
+          required: false,
           placeholder: 'Enter stall number',
         },
         {
           key: 'holding_no',
           label: 'Holding No',
-          required: true,
+          required: false,
           placeholder: 'Enter holding number',
         },
         {
@@ -386,7 +386,7 @@
         {
           key: 'area_com_sqft',
           label: 'Area (sqft)',
-          required: true,
+          required: false,
           placeholder: 'Enter commercial area in sqft',
         },
         {
