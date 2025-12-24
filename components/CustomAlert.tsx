@@ -11,7 +11,7 @@ import {
 
 const { width } = Dimensions.get("window");
 
-export default function CustomAlert({ type = "success", message, onConfirm,onCancel }) {
+export default function CustomAlert({ type = "success", message, onConfirm, onCancel }: { type?: string; message: string; onConfirm?: () => void; onCancel?: () => void }) {
   const [visible, setVisible] = useState(true);
   const scaleAnim = new Animated.Value(0.8);
 
@@ -129,7 +129,7 @@ export default function CustomAlert({ type = "success", message, onConfirm,onCan
       transparent
       visible={visible}
       animationType="fade"
-      onRequestClose={() => {}} // disables Android back button close
+      onRequestClose={() => { }} // disables Android back button close
     >
       <View style={styles.overlay}>
         <Animated.View

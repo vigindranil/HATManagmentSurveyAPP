@@ -123,9 +123,9 @@ export async function getPoliceStationsByDistrictId(
 
 export async function getMouzaListByThanaID(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
-    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByThanaID?ThanaID=${ThanaID}`
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByPoliceStationID?PoliceStationID=${ThanaID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getMouzaListByThanaID?ThanaID=${ThanaID}`;
+      `/getMouzaListByPoliceStationID?PoliceStationID=${ThanaID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
@@ -155,9 +155,9 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
 
 export async function getAdsrByThanaId(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
-    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?ThanaID=${ThanaID}`
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?PoliceStationID=${ThanaID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getADSRName?ThanaID=${ThanaID}`;
+      `/getADSRName?PoliceStationID=${ThanaID}`;
 
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getADSRName?ThanaID=${ThanaID}`
   try {
@@ -190,8 +190,8 @@ export async function getAdsrByThanaId(ThanaID: string | number) {
 
 export async function getJlNoByThanaId(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
-    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?ThanaID=${ThanaID}`
-    : Constants?.expoConfig?.extra?.BASE_URL + `/getJLNO?ThanaID=${ThanaID}`;
+    ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?PoliceStationID=${ThanaID}`
+    : Constants?.expoConfig?.extra?.BASE_URL +`/getJLNO?PoliceStationID=${ThanaID}`;
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getJLNO?ThanaID=${ThanaID}`
   try {
     const yourTokenVariable = getAuthToken();
@@ -272,9 +272,7 @@ export async function saveSurveyOnline(surveyData: any) {
 
     const formData = new FormData();
 
-    formData.append(
-      'applicationDetials',
-      JSON.stringify({
+    const raw = JSON.stringify({
         survey_id: 0,
         license_type: parseInt(surveyData?.licenseType) || 0,
         application_status: parseInt(surveyData?.applicationStatus) || 0,
@@ -323,11 +321,18 @@ export async function saveSurveyOnline(surveyData: any) {
         remarks: surveyData.remarks || '',
         active_status: surveyData.statusType || "",
         document_no: surveyData.documentNumber || "",
-        block_municipality_type: surveyData.block_or_municipality || "",
-        block_municipality_id: surveyData.block_municipality_id || "",
-        village_ward_id: surveyData.ward_id || "",
-        
+        block_municipality_type: Number(surveyData.block_or_municipality) || 0,
+        block_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.block_municipality_id) : 0) || 0,
+        panchayet_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.ward_id) : 0) || 0,
+        municipality_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.block_municipality_id) : 0) || 0,
+        ward_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.ward_id) : 0) || 0, 
       })
+
+      console.log("save raw json", raw);
+
+    formData.append(
+      'applicationDetials',
+      raw
     );
 
     if (surveyData.document_image && surveyData.document_image.uri) {
