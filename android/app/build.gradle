@@ -131,7 +131,7 @@ android {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
     }
 
-     splits {
+    splits {
         abi {
             enable true
             reset()
@@ -160,9 +160,6 @@ android {
             outputFileName = newApkName
         }
     }
-
-
-
 }
 
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
