@@ -219,7 +219,7 @@
         {
           key: 'land_transfer_explanation',
           label: 'Land Transfer Explanation',
-          required: true,
+          required: false,
           placeholder: 'Explain land transfer ',
           multiline: true, // Mark as multiline
           showFor: ['transfer'],

@@ -130,7 +130,7 @@ export const useSurveyLogic = (scrollViewRef: React.RefObject<any>) => {
         const fields = steps[currentStep].fields;
         for (const field of fields) {
             if (!isFieldVisible(field, surveyData)) continue;
-            const val = String(surveyData[field.key as keyof SurveyData] || '').trim();
+            const val = String(surveyData[field.key as keyof SurveyData] ?? '').trim();
             const result = validateField(field, val, surveyData);
             if (!result.valid) return triggerError(result.type as any, result.message!);
         }
