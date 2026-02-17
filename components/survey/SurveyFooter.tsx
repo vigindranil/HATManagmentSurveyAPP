@@ -2,8 +2,9 @@ import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { styles } from './SurveyStyles';
+import { getStyles } from './SurveyStyles';
 import { steps } from '../../constant/survey_constant';
+import { useTheme } from '@/context/theme-context';
 
 interface SurveyFooterProps {
     currentStep: number;
@@ -22,6 +23,8 @@ export const SurveyFooter: React.FC<SurveyFooterProps> = ({
     nextStep,
     color,
 }) => {
+    const { isDarkMode } = useTheme();
+    const styles = getStyles(isDarkMode);
     return (
         <View style={styles.buttonContainer}>
             {currentStep > 0 && (
@@ -55,8 +58,8 @@ export const SurveyFooter: React.FC<SurveyFooterProps> = ({
                 <LinearGradient
                     colors={
                         (isSaving || loadingImage)
-                            ? ['#9CA3AF', '#6B7280']
-                            : [color, color + 'CC']
+                            ? ['#9CA3AF', '#6B7280'] as const
+                            : [color, color + 'CC'] as const
                     }
                     style={styles.nextButtonGradient}
                 >

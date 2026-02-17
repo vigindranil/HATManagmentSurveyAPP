@@ -10,22 +10,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   User,
-  Bell,
-  Shield,
-  Download,
   LogOut,
   ChevronRight,
-  Globe,
   Moon,
-  Database,
-  Trash2,
 } from 'lucide-react-native';
-import { useOfflineStorage } from '@/hooks/useOfflineStorage';
-import { SurveyList } from '@/components/SurveyList';
 import { useAuth } from '../../context/auth-context';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '@/components/CustomAlert';
+
+import { Colors, useTheme } from '@/context/theme-context';
 
 // Define the AlertInfo type locally since the type was missing and throwing a lint error
 type AlertInfo = {
@@ -37,13 +31,12 @@ type AlertInfo = {
 };
 
 export default function Settings() {
-  const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(false);
+  const { theme, isDarkMode, toggleTheme } = useTheme();
+  const activeColors = Colors[theme];
+
   // Create a user state to hold user information
   const [userState, setUserState] = React.useState<any>(null);
 
-  const [showSurveyList, setShowSurveyList] = React.useState(false);
-  const { clearAllData, pendingSurveys } = useOfflineStorage();
   const { setIsAuthenticated, setUser } = useAuth();
 
   // CustomAlert state info
@@ -97,7 +90,7 @@ export default function Settings() {
         if (user1) {
           const parsedUser = JSON.parse(user1);
           const parsedUser2 = JSON.parse(parsedUser.userDetails);
-          if (parsedUser2){
+          if (parsedUser2) {
             setUserState(parsedUser2);
             return;
           }
@@ -127,18 +120,6 @@ export default function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleClearData = () => {
-    setAlertInfo({
-      visible: true,
-      type: 'warning',
-      message: 'This will delete all saved surveys. This action cannot be undone.',
-      onConfirm: () => {
-        clearAllData();
-        setAlertInfo((prev) => ({ ...prev, visible: false }));
-      },
-      onCancel: () => setAlertInfo((prev) => ({ ...prev, visible: false })),
-    });
-  };
 
   const handleSignOut = () => {
     setAlertInfo({
@@ -166,64 +147,18 @@ export default function Settings() {
           subtitle: 'Edit your profile information',
           hasArrow: true,
         },
-        {
-          icon: Shield,
-          title: 'Privacy & Security',
-          subtitle: 'Manage your security settings',
-          hasArrow: true,
-        },
       ],
     },
     {
       section: 'Preferences',
       items: [
         {
-          icon: Bell,
-          title: 'Notifications',
-          subtitle: 'Push notifications for updates',
-          hasSwitch: true,
-          switchValue: notificationsEnabled,
-          onSwitchToggle: setNotificationsEnabled,
-        },
-        {
           icon: Moon,
           title: 'Dark Mode',
           subtitle: 'Toggle dark theme',
           hasSwitch: true,
-          switchValue: darkMode,
-          onSwitchToggle: setDarkMode,
-        },
-        {
-          icon: Globe,
-          title: 'Language',
-          subtitle: 'English (US)',
-          hasArrow: true,
-        },
-      ],
-    },
-    {
-      section: 'Data & Storage',
-      items: [
-        {
-          icon: Database,
-          title: 'Saved Surveys',
-          subtitle: `${pendingSurveys.length} pending sync`,
-          hasArrow: true,
-          onPress: () => setShowSurveyList(true),
-        },
-        {
-          icon: Download,
-          title: 'Data Export',
-          subtitle: 'Export your survey data',
-          hasArrow: true,
-        },
-        {
-          icon: Trash2,
-          title: 'Clear All Data',
-          subtitle: 'Delete all saved surveys',
-          hasArrow: true,
-          danger: true,
-          onPress: handleClearData,
+          switchValue: isDarkMode,
+          onSwitchToggle: toggleTheme,
         },
       ],
     },
@@ -250,19 +185,19 @@ export default function Settings() {
         onPress={item?.onPress}
       >
         <View style={styles.settingIcon}>
-          <item.icon size={24} color={item.danger ? '#DC2626' : '#64748b'} />
+          <item.icon size={24} color={item.danger ? '#DC2626' : (isDarkMode ? '#94a3b8' : '#64748b')} />
         </View>
         <View style={styles.settingContent}>
-          <Text style={[styles.settingTitle, item.danger && styles.dangerText]}>
+          <Text style={[styles.settingTitle, { color: activeColors.text }, item.danger && styles.dangerText]}>
             {item.title}
           </Text>
-          <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+          <Text style={[styles.settingSubtitle, { color: activeColors.subtext }]}>{item.subtitle}</Text>
         </View>
         {item.hasSwitch && (
           <Switch
             value={item.switchValue}
             onValueChange={item.onSwitchToggle}
-            trackColor={{ false: '#f3f4f6', true: '#dbeafe' }}
+            trackColor={{ false: isDarkMode ? '#334155' : '#f3f4f6', true: isDarkMode ? '#1e40af' : '#dbeafe' }}
             thumbColor={item.switchValue ? '#2563EB' : '#9ca3af'}
           />
         )}
@@ -271,21 +206,8 @@ export default function Settings() {
     );
   };
 
-  if (showSurveyList) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => setShowSurveyList(false)}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Saved Surveys</Text>
-        </View>
-        <SurveyList />
-      </SafeAreaView>
-    );
-  }
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: activeColors.background }]} edges={['top']}>
       {alertInfo.visible && (
         <CustomAlert
           type={alertInfo.type}
@@ -294,32 +216,34 @@ export default function Settings() {
           onCancel={handleAlertCancel}
         />
       )}
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <Text style={styles.headerSubtitle}>Manage your preferences</Text>
+        <View style={[styles.header, { backgroundColor: activeColors.header }]}>
+          <Text style={[styles.headerTitle, { color: activeColors.text }]}>Settings</Text>
+          <Text style={[styles.headerSubtitle, { color: activeColors.subtext }]}>Manage Your Preferences</Text>
         </View>
 
         {/* User Profile Card */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: activeColors.card }]}>
           <View style={styles.profileAvatar}>
-            <Text style={styles.profileInitials}>JD</Text>
+            <Text style={styles.profileInitials}>
+              {userState?.UserFullName ? userState.UserFullName.charAt(0).toUpperCase() : 'U'}
+            </Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{userState?.UserFullName}</Text>
+            <Text style={[styles.profileName, { color: activeColors.text }]}>{userState?.UserFullName}</Text>
             {/* <Text style={styles.profileEmail}>john.doe@example.com</Text> */}
           </View>
-          <TouchableOpacity style={styles.editProfile}>
-            <Text style={styles.editProfileText}>Edit</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Settings Sections */}
         {settingsItems.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.section}</Text>
-            <View style={styles.sectionContent}>
+            <Text style={[styles.sectionTitle, { color: isDarkMode ? activeColors.text : '#374151' }]}>{section.section}</Text>
+            <View style={[styles.sectionContent, { backgroundColor: activeColors.card }]}>
               {section.items.map((item, itemIndex) =>
                 renderSettingItem(item, itemIndex)
               )}
@@ -340,6 +264,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+  },
+  scrollContent: {
+    paddingBottom: 40,
   },
   header: {
     paddingHorizontal: 20,

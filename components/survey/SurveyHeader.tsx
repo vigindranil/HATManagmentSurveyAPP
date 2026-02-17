@@ -1,14 +1,17 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { styles } from './SurveyStyles';
+import { getStyles } from './SurveyStyles';
 import { steps } from '../../constant/survey_constant';
+import { useTheme } from '@/context/theme-context';
 
 interface SurveyHeaderProps {
     currentStep: number;
 }
 
 export const SurveyHeader: React.FC<SurveyHeaderProps> = ({ currentStep }) => {
+    const { isDarkMode } = useTheme();
+    const styles = getStyles(isDarkMode);
     const currentStepData = steps[currentStep];
     const StepIcon = currentStepData.icon;
 

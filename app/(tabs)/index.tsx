@@ -12,15 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   FileText,
   MapPin,
-  Users,
-  TrendingUp,
   Plus,
   Clock,
   CircleCheck as CheckCircle,
   ArrowRight,
-  ChartBar as BarChart3,
-  Calendar,
-  Target,
   Store,
   ClipboardList
 } from 'lucide-react-native';
@@ -28,7 +23,6 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getDashboardCountBySurveyUserID,
@@ -37,11 +31,15 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { useDashboard } from '@/context/dashboard-context';
 import CustomAlert from '@/components/CustomAlert';
+import { Colors, useTheme } from '@/context/theme-context';
 
 const { width } = Dimensions.get('window');
 
 export default function Dashboard() {
   const router = useRouter();
+  const { theme, isDarkMode } = useTheme();
+  const activeColors = Colors[theme];
+
   const { isOnline, pendingSurveys, getAllSurveys } = useOfflineStorage();
   const [totalSurveys, setTotalSurveys] = React.useState(156);
   const [dashboardData, setDashboardData] = useState<any>([]);
@@ -53,8 +51,8 @@ export default function Dashboard() {
     visible: false,
     type: 'success', // 'success' or 'error'
     message: '',
-    context: undefined, // Initialize context
-  })
+    context: undefined as string | undefined,
+  });
 
   React.useEffect(() => {
     loadSurveyStats();
@@ -75,50 +73,45 @@ export default function Dashboard() {
           if (parsedUser2) {
             setUserDetails(parsedUser2);
           }
-        }
-        else {
+        } else {
           setAlertInfo({
             visible: true,
             type: 'Unauthorized',
             message: 'Unable to find user.',
-            context:'Cannot_find',
+            context: 'Cannot_find',
           });
         }
       } catch (error) {
-          setAlertInfo({
-            visible: true,
-            type: 'Unauthorized',
-            message: 'Unable to find user.',
-            context:'Cannot_find',
-          });
-          console.error('Error fetching dashboard data', error);
-        
+        setAlertInfo({
+          visible: true,
+          type: 'Unauthorized',
+          message: 'Unable to find user.',
+          context: 'Cannot_find',
+        });
+        console.error('Error fetching dashboard data', error);
       }
     };
     fetchUser();
   }, []);
-
-  // console.log("userdetails", userDetails);
 
   useEffect(() => {
     async function load() {
       try {
         if (userDetails && isOnline) {
           const Data = await getDashboardCountBySurveyUserID(userDetails.UserID);
-          const stallData = await getNumberOfStallsPerMarketID(
+          const stallDataResp = await getNumberOfStallsPerMarketID(
             userDetails.UserID
           );
-          
-          console.log("stallData", stallData);
-          if(Data?.status === 0){
+
+          if (Data?.status === 0) {
             setDashboardData(Data?.data);
-          }else {
+          } else {
             alert("Something went wrong while fetching dashboard data.");
             setDashboardData([]);
           }
-          if(stallData?.status === 0){
-            setStallData(stallData?.data);
-          }else {
+          if (stallDataResp?.status === 0) {
+            setStallData(stallDataResp?.data);
+          } else {
             alert("Something went wrong while fetching dashboard data.");
             setStallData([]);
           }
@@ -126,27 +119,26 @@ export default function Dashboard() {
           setDashboardData([]);
           setStallData([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading dashboard data:', error);
         if (error.status === 401) {
           setAlertInfo({
-              visible: true,
-              type: 'Unauthorized',
-              message: 'Your session has expired. Please log in again.',
-              context: 'unauthorized_access',
+            visible: true,
+            type: 'Unauthorized',
+            message: 'Your session has expired. Please log in again.',
+            context: 'unauthorized_access',
           });
           return;
-      }
-      else{
-        setAlertInfo({
-          visible: true,
-          type: 'Something went wrong',
-          message: 'Something went wrong while fetching dashboard data.',
-          context:'Something_went_wrong',
-        });
-         setDashboardData([]);
-        setStallData([]);
-      }
+        } else {
+          setAlertInfo({
+            visible: true,
+            type: 'Something went wrong',
+            message: 'Something went wrong while fetching dashboard data.',
+            context: 'Something_went_wrong',
+          });
+          setDashboardData([]);
+          setStallData([]);
+        }
       }
     }
     load();
@@ -158,7 +150,7 @@ export default function Dashboard() {
       title: 'Total Surveys',
       value: dashboardData?.total_survey?.toString() ?? '0',
       color: '#2563EB',
-      bgColor: '#EFF6FF',
+      bgColor: isDarkMode ? '#1e293b' : '#EFF6FF',
       description: 'This month',
     },
     {
@@ -166,48 +158,46 @@ export default function Dashboard() {
       title: 'Today Survey',
       value: dashboardData?.today_survey?.toString() ?? '0',
       color: '#0891B2',
-      bgColor: '#F0FDFA',
+      bgColor: isDarkMode ? '#164e63' : '#F0FDFA',
       description: 'This Month',
     },
   ];
 
-  // --- COLOR & ICON LOGIC ---
   const getStatusDetails = (status: string) => {
     switch (status) {
       case 'Completed':
         return {
-          color: '#059669', // Emerald 600
-          bgColor: '#F0FDF4', // Emerald 50
+          color: '#059669',
+          bgColor: isDarkMode ? '#064e3b' : '#F0FDF4',
           icon: CheckCircle,
-          gradient: ['#ffffff', '#F0FDF4'],
+          gradient: isDarkMode ? [activeColors.card, '#064e3b'] as const : ['#ffffff', '#F0FDF4'] as const,
         };
       case 'In Progress':
         return {
-          color: '#0891B2', // Cyan 600
-          bgColor: '#F0FDFA', // Cyan 50
+          color: '#0891B2',
+          bgColor: isDarkMode ? '#164e63' : '#F0FDFA',
           icon: Clock,
-          gradient: ['#ffffff', '#F0FDFA'],
+          gradient: isDarkMode ? [activeColors.card, '#164e63'] as const : ['#ffffff', '#F0FDFA'] as const,
         };
       case 'Pending':
         return {
-          color: '#DC2626', // Red 600
-          bgColor: '#FEF2F2', // Red 50
+          color: '#DC2626',
+          bgColor: isDarkMode ? '#7f1d1d' : '#FEF2F2',
           icon: Clock,
-          gradient: ['#ffffff', '#FEF2F2'],
+          gradient: isDarkMode ? [activeColors.card, '#7f1d1d'] as const : ['#ffffff', '#FEF2F2'] as const,
         };
       default:
         return {
-          color: '#6B7280', // Slate 500
-          bgColor: '#F8FAFC', // Slate 50
+          color: '#6B7280',
+          bgColor: isDarkMode ? '#334155' : '#F8FAFC',
           icon: Clock,
-          gradient: ['#ffffff', '#F8FAFC'],
+          gradient: isDarkMode ? [activeColors.card, '#334155'] as const : ['#ffffff', '#F8FAFC'] as const,
         };
     }
   };
 
   const handleAlertConfirm = () => {
     setAlertInfo({ ...alertInfo, visible: false });
-    // NEW: Handle unauthorized access context after alert dismissal
     if (alertInfo.context === 'unauthorized_access') {
       setUser(null);
       setIsAuthenticated(false);
@@ -225,24 +215,23 @@ export default function Dashboard() {
   return (
     <>
       <StatusBar
-        backgroundColor="green"
-        barStyle="dark-content"
+        backgroundColor={isDarkMode ? activeColors.header : "green"}
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
         translucent={false}
       />
-      <SafeAreaView style={styles.container}>
-
-      {alertInfo.visible && (
-        <CustomAlert
-          type={alertInfo.type}
-          message={alertInfo.message}
-          onConfirm={handleAlertConfirm}
-        />
-      )}
+      <SafeAreaView style={[styles.container, { backgroundColor: activeColors.background }]}>
+        {alertInfo.visible && (
+          <CustomAlert
+            type={alertInfo.type}
+            message={alertInfo.message}
+            onConfirm={handleAlertConfirm}
+          />
+        )}
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <OfflineIndicator />
           <LinearGradient
-            colors={['#1E40AF', '#2563EB', '#3B82F6']}
+            colors={isDarkMode ? ['#1e293b', '#0f172a'] as const : ['#1E40AF', '#2563EB', '#3B82F6'] as const}
             style={styles.header}
           >
             <View style={styles.headerContent}>
@@ -251,10 +240,6 @@ export default function Dashboard() {
                 <Text style={styles.headerTitle}>{userDetails?.UserFullName}</Text>
                 <Text style={styles.headerSubtitle}>Survey Dashboard</Text>
               </View>
-              {/* <View style={styles.headerStats}>
-                <Text style={styles.headerStatsNumber}>{totalSurveys}</Text>
-                <Text style={styles.headerStatsLabel}>Total Surveys</Text>
-              </View> */}
             </View>
           </LinearGradient>
 
@@ -276,9 +261,7 @@ export default function Dashboard() {
                   </View>
                   <View style={styles.newSurveyText}>
                     <Text style={styles.newSurveyTitle}>Start New Survey</Text>
-                    <Text style={styles.newSurveySubtitle}>
-                      Begin data collection
-                    </Text>
+                    <Text style={styles.newSurveySubtitle}>Begin Data Collection</Text>
                   </View>
                   <ArrowRight size={20} color="#ffffff" />
                 </View>
@@ -287,23 +270,18 @@ export default function Dashboard() {
           </View>
 
           <View style={styles.statsContainer}>
-            <Text style={styles.sectionTitle}>Overview</Text>
+            <Text style={[styles.sectionTitle, { color: activeColors.text }]}>Overview</Text>
             <View style={styles.statsGrid}>
               {stats.map((stat, index) => (
-                <View key={index} style={styles.statCard}>
+                <View key={index} style={[styles.statCard, { backgroundColor: activeColors.card }]}>
                   <View style={styles.statHeader}>
-                    <View
-                      style={[
-                        styles.statIcon,
-                        { backgroundColor: stat.bgColor },
-                      ]}
-                    >
+                    <View style={[styles.statIcon, { backgroundColor: stat.bgColor }]}>
                       <stat.icon size={20} color={stat.color} />
                     </View>
                   </View>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statTitle}>{stat.title}</Text>
-                  <Text style={styles.statDescription}>{stat.description}</Text>
+                  <Text style={[styles.statValue, { color: activeColors.text }]}>{stat.value}</Text>
+                  <Text style={[styles.statTitle, { color: activeColors.text }]}>{stat.title}</Text>
+                  <Text style={[styles.statDescription, { color: activeColors.subtext }]}>{stat.description}</Text>
                 </View>
               ))}
             </View>
@@ -311,14 +289,12 @@ export default function Dashboard() {
 
           <View style={styles.recentSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent Surveys</Text>
+              <Text style={[styles.headerSubtitle, { color: activeColors.subtext }]}>Overview Of Your Surveys</Text>
             </View>
-            
+
             {stallData && stallData.length > 0 ? (
               stallData.map((survey: any) => {
                 const statusDetails = getStatusDetails(survey.status);
-               
-
                 return (
                   <TouchableOpacity
                     key={survey.market_id}
@@ -332,56 +308,29 @@ export default function Dashboard() {
                         { borderLeftColor: statusDetails.color },
                       ]}
                     >
-                      {/* --- UPDATED ICON CONTAINER --- */}
-                      <View
-                        style={[
-                          styles.surveyIconContainer,
-                          { backgroundColor: '#EFF6FF' }, // Always light blue
-                        ]}
-                      >
-                        {/* --- ICON is now always blue --- */}
-                        <ClipboardList size={22} color="#2563EB" />
+                      <View style={[styles.surveyIconContainer, { backgroundColor: isDarkMode ? '#1e293b' : '#EFF6FF' }]}>
+                        <ClipboardList size={22} color={activeColors.primary} />
                       </View>
                       <View style={styles.surveyInfo}>
-                        
-                        <Text style={styles.surveyLocation} numberOfLines={1}>
+                        <Text style={[styles.surveyLocation, { color: activeColors.text }]} numberOfLines={1}>
                           {survey.market_name}
                         </Text>
-                        
-                        
                         <View style={styles.surveyMeta}>
                           <View style={styles.metaItem}>
-                            <Store size={14} color={statusDetails.color} />
-                            {/* <Text style={styles.stallCount}>
-                              <Text style={{ fontWeight: '600' }}>
-                                {survey.number_of_stalls}
-                              </Text>{' '}
-                              stalls
-                            </Text> */}
-                            <View style={[styles.activebox,  {backgroundColor: '#83b910d4'}]}>
-                              <Text style={{ fontWeight: '600',fontSize:11}}>
-                               {`Active : ${survey?.active_no_of_stalls}`}
+                            <Store size={14} color={activeColors.primary} />
+                            <View style={[styles.activebox, { backgroundColor: '#83b910d4' }]}>
+                              <Text style={{ fontWeight: '600', fontSize: 11, color: '#fff' }}>
+                                {`Active : ${survey?.active_no_of_stalls}`}
                               </Text>
                             </View>
-
-                            <View style={[styles.inactivebox, {backgroundColor: '#ef4444d0'}]}>
-                              <Text style={{ fontWeight: '600',fontSize:11 }}>
-                               {`Inactive : ${survey?.inactive_no_of_stalls}`}
+                            <View style={[styles.inactivebox, { backgroundColor: '#ef4444d0' }]}>
+                              <Text style={{ fontWeight: '600', fontSize: 11, color: '#fff' }}>
+                                {`Inactive : ${survey?.inactive_no_of_stalls}`}
                               </Text>
                             </View>
                           </View>
-                          <View
-                            style={[
-                              styles.surveyStatus,
-                              { backgroundColor: statusDetails.bgColor },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusText,
-                                { color: statusDetails.color },
-                              ]}
-                            >
+                          <View style={[styles.surveyStatus, { backgroundColor: statusDetails.bgColor }]}>
+                            <Text style={[styles.statusText, { color: statusDetails.color }]}>
                               {survey.status}
                             </Text>
                           </View>
@@ -392,9 +341,7 @@ export default function Dashboard() {
                 );
               })
             ) : (
-              <Text
-                style={{ textAlign: 'center', color: '#888', marginTop: 20 }}
-              >
+              <Text style={{ textAlign: 'center', color: activeColors.subtext, marginTop: 20 }}>
                 No surveys
               </Text>
             )}
@@ -408,16 +355,12 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 30,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderRadius: 24,
     marginHorizontal: 10,
     marginTop: 10,
     marginBottom: 20,
@@ -444,24 +387,9 @@ const styles = StyleSheet.create({
     color: '#BFDBFE',
     fontWeight: '500',
   },
-  headerStats: {
-    alignItems: 'flex-end',
-    marginLeft: 5,
-  },
-  headerStatsNumber: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
-  headerStatsLabel: {
-    fontSize: 10,
-    color: '#BFDBFE',
-    fontWeight: '500',
-  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
     marginBottom: 16,
   },
   sectionHeader: {
@@ -469,11 +397,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: '#2563EB',
-    fontWeight: '600',
   },
   statsContainer: {
     paddingHorizontal: 20,
@@ -486,16 +409,15 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: (width - 52) / 2,
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 16,
     marginHorizontal: 6,
     marginBottom: 12,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   statHeader: {
     flexDirection: 'row',
@@ -513,18 +435,15 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#1F2937',
     marginBottom: 4,
   },
   statTitle: {
     fontSize: 14,
-    color: '#6B7280',
     fontWeight: '600',
     marginBottom: 2,
   },
   statDescription: {
     fontSize: 12,
-    color: '#9CA3AF',
     fontWeight: '500',
   },
   ctaContainer: {
@@ -534,10 +453,6 @@ const styles = StyleSheet.create({
   newSurveyButton: {
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
     elevation: 8,
   },
   newSurveyGradient: {
@@ -575,16 +490,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 24,
   },
-
-  // --- STALL DATA CARD STYLES ---
   surveyCardWrapper: {
     borderRadius: 16,
     marginBottom: 14,
-    shadowColor: '#475569',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    elevation: 3,
   },
   surveyCard: {
     flexDirection: 'row',
@@ -604,11 +513,9 @@ const styles = StyleSheet.create({
   surveyInfo: {
     flex: 1,
   },
-  
   surveyLocation: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#1E293B',
     marginBottom: 10,
   },
   surveyMeta: {
@@ -618,31 +525,19 @@ const styles = StyleSheet.create({
   },
   metaItem: {
     flexDirection: 'row',
-    alignItems: 'center',  
+    alignItems: 'center',
   },
   activebox: {
     padding: 5,
     borderRadius: 10,
-    textAlign: 'center',
     marginLeft: 5,
   },
   inactivebox: {
     padding: 5,
     borderRadius: 10,
-    textAlign: 'center',
     marginLeft: 5,
-    
-  },
-  stallCount: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '400',
-    marginLeft: 6,
-    
   },
   surveyStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 12,
@@ -650,6 +545,5 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: '700',
-    marginLeft: 5,
   },
 });

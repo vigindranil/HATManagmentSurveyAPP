@@ -12,9 +12,12 @@ import {
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
 
+import { ThemeProvider, useTheme } from "@/context/theme-context";
+
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
+  const { isDarkMode } = useTheme();
   const [fontsLoaded] = useFonts({
     "Inter-Regular": Inter_400Regular,
     "Inter-SemiBold": Inter_600SemiBold,
@@ -37,22 +40,28 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* Always declare screens */}
-      <Stack.Screen name="(auth)/login" />
-      <Stack.Screen name="(app)/index" />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <>
+      <StatusBar
+        style={isDarkMode ? "light" : "dark"}
+        backgroundColor={isDarkMode ? "#1e293b" : "white"}
+        translucent={false}
+      />
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Always declare screens */}
+        <Stack.Screen name="(auth)/login" />
+        <Stack.Screen name="(app)/index" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+    </>
   );
 }
 
 export default function RootLayout() {
   return (
-    <>
-      <StatusBar style="dark" backgroundColor="white" translucent={false} />
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <RootLayoutNav />
-      </AuthProvider>
-    </>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

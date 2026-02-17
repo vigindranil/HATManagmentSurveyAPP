@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser) {
           const parsedUser: User = JSON.parse(storedUser);
 
-          if (parsedUser?.token && isTokenValid(parsedUser.token)){
+          if (parsedUser?.token && isTokenValid(parsedUser.token)) {
             setAuthToken(parsedUser.token);
             setUser(parsedUser);
             setIsAuthenticated(true);
@@ -88,11 +88,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login
   // --------------------------------------------------
   const login = async (token: string) => {
-    console.log('HI', token);
     if (!token) return;
     try {
       const decodedUser = jwtDecode<User>(token);
-      console.log('decodedUser', decodedUser);
       const fullUser = { ...decodedUser, token };
       setAuthToken(token);
       setUser(fullUser);

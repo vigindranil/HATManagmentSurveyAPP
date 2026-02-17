@@ -16,7 +16,12 @@ import {
   MapPin,
 } from 'lucide-react-native';
 
+import { Colors, useTheme } from '@/context/theme-context';
+
 export default function Reports() {
+  const { isDarkMode, theme } = useTheme();
+  const activeColors = Colors[theme];
+
   const reportData = [
     {
       title: 'Monthly Survey Report',
@@ -51,12 +56,12 @@ export default function Reports() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: activeColors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Reports & Analytics</Text>
-          <Text style={styles.headerSubtitle}>Survey performance insights</Text>
+        <View style={[styles.header, { backgroundColor: activeColors.header }]}>
+          <Text style={[styles.headerTitle, { color: activeColors.text }]}>Reports & Analytics</Text>
+          <Text style={[styles.headerSubtitle, { color: activeColors.subtext }]}>Survey Performance Insights</Text>
         </View>
 
         {/* Filter Options */}
@@ -66,69 +71,30 @@ export default function Reports() {
             showsHorizontalScrollIndicator={true}
             contentContainerStyle={styles.filterContainer}
           >
-            <TouchableOpacity style={styles.filterButton}>
-              <Calendar size={18} color="#64748b" />
-              <Text style={styles.filterText}>Date Range</Text>
+            <TouchableOpacity style={[styles.filterButton, { backgroundColor: activeColors.card, borderColor: activeColors.border }]}>
+              <Calendar size={18} color={activeColors.subtext} />
+              <Text style={[styles.filterText, { color: activeColors.subtext }]}>Date Range</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterButton}>
-              <MapPin size={18} color="#64748b" />
-              <Text style={styles.filterText}>Location</Text>
+            <TouchableOpacity style={[styles.filterButton, { backgroundColor: activeColors.card, borderColor: activeColors.border }]}>
+              <MapPin size={18} color={activeColors.subtext} />
+              <Text style={[styles.filterText, { color: activeColors.subtext }]}>Location</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.filterButton}>
-              <Filter size={18} color="#64748b" />
-              <Text style={styles.filterText}>Filter</Text>
+            <TouchableOpacity style={[styles.filterButton, { backgroundColor: activeColors.card, borderColor: activeColors.border }]}>
+              <Filter size={18} color={activeColors.subtext} />
+              <Text style={[styles.filterText, { color: activeColors.subtext }]}>Filter</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
-        {/* Analytics Cards */}
-        {/* <View style={styles.analyticsContainer}>
-          <Text style={styles.sectionTitle}>Key Metrics</Text>
-          <View style={styles.metricsGrid}>
-            {analytics.map((metric, index) => (
-              <View key={index} style={styles.metricCard}>
-                <View style={styles.metricHeader}>
-                    <Text style={styles.metricLabel}>{metric.label}</Text>
-                  <View>
-                    <Text style={[styles.metricTrend, { color: metric.color }]}>
-                      {metric.trend}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.metricValue}>{metric.value}</Text>
-              </View>
-            ))}
-          </View>
-        </View> */}
-
-        {/* Chart Placeholder */}
-        {/* <View style={styles.chartContainer}>
-          <Text style={styles.sectionTitle}>Survey Trends</Text>
-          <View style={styles.chartPlaceholder}>
-            <BarChart3 size={48} color="#94a3b8" />
-            <Text style={styles.chartText}>
-              Chart visualization would appear here
+        {/* Coming Soon Section */}
+        <View style={styles.comingSoonContainer}>
+          <View style={[styles.comingSoonCard, { backgroundColor: activeColors.card }]}>
+            <BarChart3 size={64} color={isDarkMode ? '#3b82f6' : '#2563EB'} style={styles.comingSoonIcon} />
+            <Text style={[styles.comingSoonTitle, { color: activeColors.text }]}>Analytics Coming Soon</Text>
+            <Text style={[styles.comingSoonSubtitle, { color: activeColors.subtext }]}>
+              We're working on advanced reporting and data visualization features. Stay tuned!
             </Text>
           </View>
-        </View> */}
-
-        {/* Report Downloads */}
-        {/* <View style={styles.reportsContainer}>
-          <Text style={styles.sectionTitle}>Available Reports</Text>
-          {reportData.map((report, index) => (
-            <View key={index} style={styles.reportCard}>
-              <View style={styles.reportInfo}>
-                <Text style={styles.reportTitle}>{report.title}</Text>
-                <View style={styles.reportMeta}>
-                  <Text style={styles.reportDate}>{report.date}</Text>
-                  <Text style={styles.reportSize}>{report.size}</Text>
-                </View>
-              </View>
-              <TouchableOpacity style={styles.downloadButton}>
-                <Download size={20} color="#2563EB" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View> */}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -177,130 +143,40 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: '500',
   },
-  analyticsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-
-  insideBox: {
-    flexDirection: 'row',
-  },
-
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  metricCard: {
-    width: '50%',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 6,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  metricHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metricLabel: {
-    fontSize: 14,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  metricTrend: {
-    fontSize: 11,
-    fontWeight: '600',
-   
-  },
-  metricValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
-  },
-  chartContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  chartPlaceholder: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 200,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
   scrollHorizontalView: {
     marginRight: 20,
     marginLeft: 20,
   },
-  chartText: {
-    fontSize: 16,
-    color: '#94a3b8',
-    marginTop: 12,
-    fontWeight: '500',
+  comingSoonContainer: {
+    padding: 20,
+    marginTop: 20,
   },
-  reportsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  reportCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
+  comingSoonCard: {
+    borderRadius: 20,
+    padding: 40,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 12,
+    elevation: 5,
   },
-  reportInfo: {
-    flex: 1,
+  comingSoonIcon: {
+    marginBottom: 20,
+    opacity: 0.9,
   },
-  reportTitle: {
+  comingSoonTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  comingSoonSubtitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  reportMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  reportDate: {
-    fontSize: 14,
-    color: '#64748b',
-    marginRight: 16,
-  },
-  reportSize: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  downloadButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#dbeafe',
+    textAlign: 'center',
+    lineHeight: 24,
+    opacity: 0.8,
+    paddingHorizontal: 10,
   },
 });

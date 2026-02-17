@@ -155,6 +155,7 @@ export const useSurveyLogic = (scrollViewRef: React.RefObject<any>) => {
         setIsSaving(true);
         try {
             const res = await saveSurveyOnline(surveyData);
+            console.log("res", res);
             if (res.status === 0) {
                 setAlertInfo({ visible: true, type: 'success', message: `Application Submitted! ID: ${res.data?.applicationNumber}`, context: 'survey_submission' });
                 setNeedsRefresh(!needsRefresh);

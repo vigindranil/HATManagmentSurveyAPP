@@ -2,8 +2,6 @@ import { getAuthToken } from './context/tokenManager';
 import formatDateToDDMMYYYY from './utils/format';
 import Constants from 'expo-constants';
 
-console.log('constants', Constants?.expoConfig?.extra?.API_URL_AUTH);
-console.log('constants', Constants?.expoConfig?.extra?.BASE_URL);
 
 // login
 
@@ -13,7 +11,6 @@ export async function authentication(username: string, password: string) {
     ? `${process.env.EXPO_PUBLIC_API_URL_AUTH}`
     : Constants?.expoConfig?.extra?.API_URL_AUTH;
 
-  console.log('🔍 API URL AUTH:', process.env.EXPO_PUBLIC_API_URL_AUTH);
 
   try {
     const myHeaders = new Headers();
@@ -33,7 +30,6 @@ export async function authentication(username: string, password: string) {
 
     const response = await fetch(url, requestOptions);
 
-    console.log('Login API response:', response);
 
     if (response.status === 401) {
       return {
@@ -50,7 +46,6 @@ export async function authentication(username: string, password: string) {
 
     return data;
   } catch (error) {
-    console.log('Error generating token:', error.message);
     throw error;
   }
 }
@@ -81,7 +76,6 @@ export async function getAllDistrictList() {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching district list:', error.message);
     throw error;
   }
 }
@@ -92,7 +86,7 @@ export async function getPoliceStationsByDistrictId(
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getThanaListByDistrictID?DistrictID=${districtId}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getThanaListByDistrictID?DistrictID=${districtId}`;
+    `/getThanaListByDistrictID?DistrictID=${districtId}`;
 
   try {
     const yourTokenVariable = getAuthToken();
@@ -116,7 +110,6 @@ export async function getPoliceStationsByDistrictId(
 
     return data;
   } catch (error) {
-    console.log('Error fetching police station list:', error.message);
     throw error;
   }
 }
@@ -125,7 +118,7 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getMouzaListByPoliceStationID?PoliceStationID=${ThanaID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getMouzaListByPoliceStationID?PoliceStationID=${ThanaID}`;
+    `/getMouzaListByPoliceStationID?PoliceStationID=${ThanaID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
@@ -148,7 +141,6 @@ export async function getMouzaListByThanaID(ThanaID: string | number) {
 
     return data;
   } catch (error) {
-    console.log('Error fetching mouza list:', error.message);
     throw error;
   }
 }
@@ -157,11 +149,10 @@ export async function getAdsrByThanaId(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getADSRName?PoliceStationID=${ThanaID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getADSRName?PoliceStationID=${ThanaID}`;
+    `/getADSRName?PoliceStationID=${ThanaID}`;
 
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getADSRName?ThanaID=${ThanaID}`
   try {
-    console.log('adsrurl', url);
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
       method: 'POST',
@@ -183,7 +174,6 @@ export async function getAdsrByThanaId(ThanaID: string | number) {
 
     return data;
   } catch (error) {
-    console.log('Error adsr  list:', error.message);
     throw error;
   }
 }
@@ -191,7 +181,7 @@ export async function getAdsrByThanaId(ThanaID: string | number) {
 export async function getJlNoByThanaId(ThanaID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getJLNO?PoliceStationID=${ThanaID}`
-    : Constants?.expoConfig?.extra?.BASE_URL +`/getJLNO?PoliceStationID=${ThanaID}`;
+    : Constants?.expoConfig?.extra?.BASE_URL + `/getJLNO?PoliceStationID=${ThanaID}`;
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getJLNO?ThanaID=${ThanaID}`
   try {
     const yourTokenVariable = getAuthToken();
@@ -215,7 +205,6 @@ export async function getJlNoByThanaId(ThanaID: string | number) {
 
     return data;
   } catch (error) {
-    console.log('Error jlno list:', error.message);
     throw error;
   }
 }
@@ -226,7 +215,7 @@ export async function getAllHaatDetailsByDistrictID(
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`;
+    `/getAllHaatDetailsByDistrictID?DistrictID=${DistrictID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
@@ -248,7 +237,6 @@ export async function getAllHaatDetailsByDistrictID(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }
@@ -259,7 +247,6 @@ export async function saveSurveyOnline(surveyData: any) {
     : Constants?.expoConfig?.extra?.BASE_URL + `/saveSurveyDetails`;
   // const url =`http://192.168.0.236:9998/api/user/saveSurveyDetails`
 
-  console.log(url);
 
   try {
     const yourTokenVariable = getAuthToken();
@@ -268,67 +255,65 @@ export async function saveSurveyOnline(surveyData: any) {
     myHeaders.append('Authorization', `Bearer ${yourTokenVariable}`);
     // Do not set Content-Type header when sending FormData; let the browser set it automatically.
 
-    console.log('surveyData', surveyData);
 
     const formData = new FormData();
 
     const raw = JSON.stringify({
-        survey_id: 0,
-        license_type: parseInt(surveyData?.licenseType) || 0,
-        application_status: parseInt(surveyData?.applicationStatus) || 0,
-        applicant_type: parseInt(surveyData?.applicationFor) || 0,
-        usage_type: parseInt(surveyData?.usesType) || 0,
-        name: surveyData?.name || '',
-        guardian_name: surveyData?.guardian_name || '',
-        address: surveyData?.address || '',
-        mobile: surveyData?.mobile || '',
-        citizenship: surveyData?.citizenship || '',
-        pin_code: parseInt(surveyData?.pin_code) || 0,
-        is_within_family: (String(surveyData?.is_within_family) === "true" ? 1 : 0) || 0,
-        transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
-        document_type: surveyData?.documentTypes || '',
-        pan: surveyData?.pan || '',
-        previous_license_no: surveyData?.previous_license_no || '',
-        license_expiry_date:
-          formatDateToDDMMYYYY(surveyData?.license_expiry_date) || '',
-        property_tax_payment_to_year:
-          parseInt(surveyData?.property_tax_payment_to_year) || 0,
-        land_transfer_explanation: surveyData?.land_transfer_explanation || '',
-        occupy: (String(surveyData?.occupy) === "true" ? 1 : 0) || 0,
-        occupy_from_year: parseInt(surveyData?.occupy_from_year) || 0,
-        present_occupier_name: surveyData?.present_occupier_name || '',
-        occupier_guardian_name: surveyData?.occupier_guardian_name || '',
-        adsr_name: surveyData?.adsr_name || '',
-        is_same_owner: surveyData?.is_same_owner || 0,
-        rented_to_whom: surveyData?.rented_to_whom || '',
-        district_id: parseInt(surveyData?.district_id) || 0,
-        police_station_id: parseInt(surveyData?.police_station_id) || 0,
-        hat_id: parseInt(surveyData?.hat_id) || 0,
-        mouza_id: parseInt(surveyData?.mouza_id) || 0,
-        stall_no: surveyData?.stall_no || '',
-        holding_no: surveyData?.holding_no || '',
-        jl_no: surveyData?.jl_no || '',
-        khatian_no: surveyData?.khatian_no || '',
-        plot_no: surveyData?.plot_no || '',
-        // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
-        area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
-        // direction: surveyData?.direction || "", direction commented out
-        latitude: parseFloat(surveyData?.latitude) || 0.0,
-        longitude: parseFloat(surveyData?.longitude) || 0.0,
-        land_valuation_amount:
-          parseFloat(surveyData?.land_valuation_amount) || 0.0,
-        user_id: parseInt(surveyData?.user_id) || 0,
-        remarks: surveyData.remarks || '',
-        active_status: surveyData.statusType || "",
-        document_no: surveyData.documentNumber || "",
-        block_municipality_type: Number(surveyData.block_or_municipality) || 0,
-        block_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.block_municipality_id) : 0) || 0,
-        panchayet_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.ward_id) : 0) || 0,
-        municipality_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.block_municipality_id) : 0) || 0,
-        ward_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.ward_id) : 0) || 0, 
-      })
+      survey_id: 0,
+      license_type: parseInt(surveyData?.licenseType) || 0,
+      application_status: parseInt(surveyData?.applicationStatus) || 0,
+      applicant_type: parseInt(surveyData?.applicationFor) || 0,
+      usage_type: parseInt(surveyData?.usesType) || 0,
+      name: surveyData?.name || '',
+      guardian_name: surveyData?.guardian_name || '',
+      address: surveyData?.address || '',
+      mobile: surveyData?.mobile || '',
+      citizenship: surveyData?.citizenship || '',
+      pin_code: parseInt(surveyData?.pin_code) || 0,
+      is_within_family: (String(surveyData?.is_within_family) === "true" ? 1 : 0) || 0,
+      transfer_relationship: parseInt(surveyData?.transfer_relationship) || 0,
+      document_type: surveyData?.documentTypes || '',
+      pan: surveyData?.pan || '',
+      previous_license_no: surveyData?.previous_license_no || '',
+      license_expiry_date:
+        formatDateToDDMMYYYY(surveyData?.license_expiry_date) || '',
+      property_tax_payment_to_year:
+        parseInt(surveyData?.property_tax_payment_to_year) || 0,
+      land_transfer_explanation: surveyData?.land_transfer_explanation || '',
+      occupy: (String(surveyData?.occupy) === "true" ? 1 : 0) || 0,
+      occupy_from_year: parseInt(surveyData?.occupy_from_year) || 0,
+      present_occupier_name: surveyData?.present_occupier_name || '',
+      occupier_guardian_name: surveyData?.occupier_guardian_name || '',
+      adsr_name: surveyData?.adsr_name || '',
+      is_same_owner: surveyData?.is_same_owner || 0,
+      rented_to_whom: surveyData?.rented_to_whom || '',
+      district_id: parseInt(surveyData?.district_id) || 0,
+      police_station_id: parseInt(surveyData?.police_station_id) || 0,
+      hat_id: parseInt(surveyData?.hat_id) || 0,
+      mouza_id: parseInt(surveyData?.mouza_id) || 0,
+      stall_no: surveyData?.stall_no || '',
+      holding_no: surveyData?.holding_no || '',
+      jl_no: surveyData?.jl_no || '',
+      khatian_no: surveyData?.khatian_no || '',
+      plot_no: surveyData?.plot_no || '',
+      // area_dom_sqft: parseFloat(surveyData?.area_dom_sqft) || 0.0,
+      area_com_sqft: parseFloat(surveyData?.area_com_sqft) || 0.0,
+      // direction: surveyData?.direction || "", direction commented out
+      latitude: parseFloat(surveyData?.latitude) || 0.0,
+      longitude: parseFloat(surveyData?.longitude) || 0.0,
+      land_valuation_amount:
+        parseFloat(surveyData?.land_valuation_amount) || 0.0,
+      user_id: parseInt(surveyData?.user_id) || 0,
+      remarks: surveyData.remarks || '',
+      active_status: surveyData.statusType || "",
+      document_no: surveyData.documentNumber || "",
+      block_municipality_type: Number(surveyData.block_or_municipality) || 0,
+      block_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.block_municipality_id) : 0) || 0,
+      panchayet_id: (surveyData?.block_or_municipality === "1" ? Number(surveyData?.ward_id) : 0) || 0,
+      municipality_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.block_municipality_id) : 0) || 0,
+      ward_id: (surveyData?.block_or_municipality === "2" ? Number(surveyData?.ward_id) : 0) || 0,
+    })
 
-      console.log("save raw json", raw);
 
     formData.append(
       'applicationDetials',
@@ -483,7 +468,7 @@ export async function saveSurveyOnline(surveyData: any) {
       redirect: 'follow' as RequestRedirect,
     };
 
-    
+
 
     // const response = await fetch(
     //     'http://192.168.0.210:9998/api/user/saveSurveyDetails',
@@ -491,7 +476,6 @@ export async function saveSurveyOnline(surveyData: any) {
     //   );
 
     const response = await fetch(url, requestOptions);
-    console.log('response', response);
 
     if (response.status === 401) {
       throw { status: 401, message: 'Unauthorized: Please login again.' };
@@ -503,11 +487,11 @@ export async function saveSurveyOnline(surveyData: any) {
 
     const data = await response.json();
 
-    console.log('data', data);
+    console.log("data", data);
+
 
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }
@@ -518,13 +502,11 @@ export async function getDashboardCountBySurveyUserID(
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`;
+    `/getDashboardCountBySurveyUserID?SurveyUserID=${SurveyUserID}`;
 
-  console.log('url', url);
   try {
     const yourTokenVariable = getAuthToken();
 
-    console.log('token', yourTokenVariable);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -544,7 +526,6 @@ export async function getDashboardCountBySurveyUserID(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }
@@ -553,7 +534,7 @@ export async function getNumberOfStallsPerMarketID(UserID: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getNumberOfStallsPerMarketID?UserID=${UserID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getNumberOfStallsPerMarketID?UserID=${UserID}`;
+    `/getNumberOfStallsPerMarketID?UserID=${UserID}`;
 
   try {
     const yourTokenVariable = getAuthToken();
@@ -576,7 +557,6 @@ export async function getNumberOfStallsPerMarketID(UserID: string | number) {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error fetching haat details:', error.message);
     throw error;
   }
 }
@@ -585,7 +565,7 @@ export async function getUserDetailsByPhoneNumber(phoneNo: string | number) {
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`;
+    `/getUserDetailsByPhoneNumber?MobileNumber=${phoneNo}`;
   // const url = `http://115.187.62.16:8005/HMSRestAPI/api/user/getUserDetailsByPhoneNumber?MobileNumber={ThanaID}`
   try {
     const yourTokenVariable = getAuthToken();
@@ -608,7 +588,6 @@ export async function getUserDetailsByPhoneNumber(phoneNo: string | number) {
     const data = await response.json();
     return data;
   } catch (error) {
-    console.log('Error jlno list:', error.message);
     throw error;
   }
 }
@@ -619,7 +598,7 @@ export async function getBlocksOrMunicipalitiesByDistrictId(DistrictID: string |
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getDistWiseBlockOrMunicipalityDetails?BlockMunicipalityStatus=${type}&DistrictID=${DistrictID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getDistWiseBlockOrMunicipalityDetails?BlockMunicipalityStatus=${type}&DistrictID=${DistrictID}`;
+    `/getDistWiseBlockOrMunicipalityDetails?BlockMunicipalityStatus=${type}&DistrictID=${DistrictID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
@@ -642,7 +621,6 @@ export async function getBlocksOrMunicipalitiesByDistrictId(DistrictID: string |
 
     return data;
   } catch (error) {
-    console.log('Error fetching mouza list:', error.message);
     throw error;
   }
 }
@@ -653,7 +631,7 @@ export async function getBoundaryDetailsByBoundaryID(BoundaryLevelID: string | n
   const url = process.env.EXPO_PUBLIC_BASE_URL
     ? `${process.env.EXPO_PUBLIC_BASE_URL}/getBoundaryDetailsByBoundaryID?BoundaryLevelID=${BoundaryLevelID}&BoundaryID=${BoundaryID}&IsUrban=${IsUrban}&LoginUserID=${LoginUserID}`
     : Constants?.expoConfig?.extra?.BASE_URL +
-      `/getBoundaryDetailsByBoundaryID?BoundaryLevelID=${BoundaryLevelID}&BoundaryID=${BoundaryID}&IsUrban=${IsUrban}&LoginUserID=${LoginUserID}`;
+    `/getBoundaryDetailsByBoundaryID?BoundaryLevelID=${BoundaryLevelID}&BoundaryID=${BoundaryID}&IsUrban=${IsUrban}&LoginUserID=${LoginUserID}`;
   try {
     const yourTokenVariable = getAuthToken();
     const response = await fetch(url, {
@@ -676,7 +654,6 @@ export async function getBoundaryDetailsByBoundaryID(BoundaryLevelID: string | n
 
     return data;
   } catch (error) {
-    console.log('Error fetching mouza list:', error.message);
     throw error;
   }
 }

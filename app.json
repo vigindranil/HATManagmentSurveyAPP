@@ -53,8 +53,8 @@
     },
     "extra": {
       "router": {},
-      "API_URL_AUTH": "http://115.187.62.16:8005/HMSRestAPI/api/auth/authentication",
-      "BASE_URL": "http://115.187.62.16:8005/HMSRestAPI/api/user",
+      "API_URL_AUTH": "https://vigpl.com/HMSRestAPI/api/auth/authentication",
+      "BASE_URL": "https://vigpl.com/HMSRestAPI/api/user",
       "eas": {
         "projectId": "b6a9a2a9-a35b-4f95-b5b5-f65600cdae59"
       }

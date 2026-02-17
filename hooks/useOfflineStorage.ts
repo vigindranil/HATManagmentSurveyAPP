@@ -15,7 +15,7 @@ export interface SurveyData {
     village: string;
     latitude: string;
     longitude: string;
-    
+
     // Shop/Stall Details
     slNo: string;
     registerNo: string;
@@ -29,7 +29,7 @@ export interface SurveyData {
     vacant: string;
     totalArea: string;
     typeOfStructure: string;
-    
+
     // Possession Details
     possessionName: string;
     fatherHusbandName: string;
@@ -37,18 +37,18 @@ export interface SurveyData {
     lr: string;
     rs: string;
     khatianNo: string;
-    
+
     // License & Plan Information
     buildingPlanApproved: string;
     licenseIssued: string;
     pendingIssues: string;
-    
+
     // Contact & Identity Information
     aadharA: string;
     aadharB: string;
     mobileA: string;
     mobileB: string;
-    
+
     // Remarks
     remarks: string;
   };
@@ -114,16 +114,16 @@ export const useOfflineStorage = () => {
       // Get existing surveys
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.SURVEYS);
       const existingSurveys: SurveyData[] = stored ? JSON.parse(stored) : [];
-      
+
       // Add new survey
       const updatedSurveys = [...existingSurveys, survey];
-      
+
       // Save to storage
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEYS, JSON.stringify(updatedSurveys));
-      
+
       // Update pending surveys state
       setPendingSurveys(prev => [...prev, survey]);
-      
+
       // Try to sync immediately if online
       if (isOnline) {
         syncSurveys();
@@ -140,7 +140,7 @@ export const useOfflineStorage = () => {
     if (!isOnline || syncInProgress) return;
 
     setSyncInProgress(true);
-    
+
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.SURVEYS);
       if (!stored) return;
@@ -158,11 +158,10 @@ export const useOfflineStorage = () => {
         try {
           // Simulate API call delay
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           // Mark as synced
           survey.synced = true;
-          
-          console.log(`Survey ${survey.id} synced successfully`);
+
         } catch (error) {
           console.error(`Failed to sync survey ${survey.id}:`, error);
           // Keep survey as unsynced for retry
@@ -171,15 +170,15 @@ export const useOfflineStorage = () => {
 
       // Update storage with synced status
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEYS, JSON.stringify(surveys));
-      
+
       // Update last sync time
       const now = Date.now();
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, now.toString());
       setLastSyncTime(now);
-      
+
       // Update pending surveys state
       setPendingSurveys(surveys.filter(survey => !survey.synced));
-      
+
     } catch (error) {
       console.error('Error during sync:', error);
     } finally {
@@ -204,7 +203,7 @@ export const useOfflineStorage = () => {
 
       const surveys: SurveyData[] = JSON.parse(stored);
       const filteredSurveys = surveys.filter(survey => survey.id !== surveyId);
-      
+
       await AsyncStorage.setItem(STORAGE_KEYS.SURVEYS, JSON.stringify(filteredSurveys));
       setPendingSurveys(prev => prev.filter(survey => survey.id !== surveyId));
     } catch (error) {

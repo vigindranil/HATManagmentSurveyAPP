@@ -1,14 +1,17 @@
 import React from 'react';
 import { View } from 'react-native';
 import { CircleCheck as CheckCircle } from 'lucide-react-native';
-import { styles } from './SurveyStyles';
+import { getStyles } from './SurveyStyles';
 import { steps } from '../../constant/survey_constant';
+import { useTheme } from '@/context/theme-context';
 
 interface StepIndicatorProps {
     currentStep: number;
 }
 
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
+    const { isDarkMode } = useTheme();
+    const styles = getStyles(isDarkMode);
     return (
         <View style={styles.stepIndicatorContainer}>
             <View style={styles.stepIndicator}>

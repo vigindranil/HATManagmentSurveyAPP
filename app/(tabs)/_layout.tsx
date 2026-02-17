@@ -7,11 +7,13 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import GPSGuard from '@/utils/GPSGuard';
-import { DashboardProvider } from '@/context/dashboard-context';
+import { DashboardProvider } from '@/context/dashboard-context'; import { Colors, useTheme } from '@/context/theme-context';
 
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const { isDarkMode, theme } = useTheme();
+  const activeColors = Colors[theme];
 
   return (
     <DashboardProvider>
@@ -21,15 +23,15 @@ export default function TabLayout() {
             headerShown: false,
             tabBarHideOnKeyboard: true,
             tabBarStyle: {
-              backgroundColor: '#ffffff',
+              backgroundColor: activeColors.header,
               borderTopWidth: 1,
-              borderTopColor: '#e5e7eb',
+              borderTopColor: activeColors.border,
               paddingBottom: (insets?.bottom ?? 0) + 8,
               paddingTop: 5,
               height: 62 + (insets?.bottom ?? 0),
             },
-            tabBarActiveTintColor: '#2563EB',
-            tabBarInactiveTintColor: '#6b7280',
+            tabBarActiveTintColor: activeColors.primary,
+            tabBarInactiveTintColor: activeColors.subtext,
             tabBarLabelStyle: {
               fontSize: 12,
               fontWeight: '600',

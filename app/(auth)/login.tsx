@@ -37,7 +37,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
- 
+
   const [error, setError] = useState('');
   const auth = useAuth();
   const login = auth.login;
@@ -76,14 +76,13 @@ export default function Login() {
     }).start();
     try {
       const userData = await authentication(username, password);
-      console.log('userDatas', userData);
+
 
       if (userData?.status === 0) {
         try {
-          console.log('userData', userData);
           await login(userData?.data?.access_token);
         } catch (e) {
-          setError('Login failed. Please try again.');
+          setError(userData?.message || 'Login failed. Please try again.');
           setIsLoading(false);
           return;
         }
@@ -102,7 +101,7 @@ export default function Login() {
           duration: 150,
           useNativeDriver: true,
         }).start();
-        setError('Please try again later.');
+        setError(userData?.message || 'Please try again later.');
       }
     } catch (err) {
       setError('Please try again.');
@@ -110,7 +109,7 @@ export default function Login() {
       setIsLoading(false);
     }
 
-    
+
   };
 
   useEffect(() => {

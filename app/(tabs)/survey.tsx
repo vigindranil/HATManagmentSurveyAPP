@@ -14,12 +14,17 @@ import { SurveyHeader } from '@/components/survey/SurveyHeader';
 import { StepIndicator } from '@/components/survey/StepIndicator';
 import { SurveyField } from '@/components/survey/SurveyField';
 import { SurveyFooter } from '@/components/survey/SurveyFooter';
-import { styles } from '@/components/survey/SurveyStyles';
+// import { styles } from '@/components/survey/SurveyStyles'; // No longer used as a static export
 
 // Logic Hook
 import { useSurveyLogic } from '@/components/survey/useSurveyLogic';
+import { Colors, useTheme } from '@/context/theme-context';
+import { getStyles } from '@/components/survey/SurveyStyles';
 
 export default function Survey() {
+  const { isDarkMode, theme } = useTheme();
+  const styles = getStyles(isDarkMode);
+  const activeColors = Colors[theme];
   const scrollViewRef = useRef<ScrollView>(null);
   const logic = useSurveyLogic(scrollViewRef);
 

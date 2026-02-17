@@ -9,110 +9,154 @@ import {
   Dimensions,
 } from "react-native";
 
+import {
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  ShieldAlert,
+  Lock,
+  Zap,
+  AlertTriangle,
+  ClipboardX,
+  SearchX,
+  HelpCircle,
+  Bell,
+} from 'lucide-react-native';
+
+import { Colors, useTheme } from "@/context/theme-context";
+
 const { width } = Dimensions.get("window");
 
 export default function CustomAlert({ type = "success", message, onConfirm, onCancel }: { type?: string; message: string; onConfirm?: () => void; onCancel?: () => void }) {
+  const { isDarkMode, theme } = useTheme();
+  const activeColors = Colors[theme];
   const [visible, setVisible] = useState(true);
   const scaleAnim = new Animated.Value(0.8);
 
   let colors;
+  let IconComponent;
+
   switch (type) {
     case "success":
       colors = {
-        bg: "#2563EB", // Blue
-        badge: "#3B82F6",
-        emoji: "🎉",
-        title: "Success!",
+        bg: isDarkMode ? "#064E3B" : "#F0FDF4",
+        text: isDarkMode ? "#D1FAE5" : "#15803D",
+        border: "#22C55E",
+        badge: "#10B981",
+        title: "Success",
       };
+      IconComponent = CheckCircle2;
       break;
     case "error":
       colors = {
-        bg: "#DC2626", // Red
+        bg: isDarkMode ? "#450A0A" : "#FEF2F2",
+        text: isDarkMode ? "#FECACA" : "#B91C1C",
+        border: "#EF4444",
         badge: "#EF4444",
-        emoji: "❌",
-        title: "Error!",
+        title: "Error",
       };
+      IconComponent = XCircle;
       break;
     case "Invalid":
       colors = {
-        bg: "#F59E42", // Orange-ish for warning
-        badge: "#FBBF24", // Amber-400
-        emoji: "⚠️",
-        title: "Invalid!",
+        bg: isDarkMode ? "#451A03" : "#FFFBEB",
+        text: isDarkMode ? "#FDE68A" : "#B45309",
+        border: "#F59E0B",
+        badge: "#F59E0B",
+        title: "Invalid",
       };
+      IconComponent = AlertCircle;
       break;
     case "Permission Denied":
       colors = {
-        bg: "#F87171", // Light Red
-        badge: "#DC2626", // Deep Red
-        emoji: "🚫",
-        title: "Permission Denied",
+        bg: isDarkMode ? "#450A0A" : "#FEF2F2",
+        text: isDarkMode ? "#FECACA" : "#B91C1C",
+        border: "#DC2626",
+        badge: "#DC2626",
+        title: "Denied",
       };
+      IconComponent = ShieldAlert;
       break;
     case "Unauthorized":
       colors = {
-        bg: "#DC2626", // Red
-        badge: "#F87171", // Light Red
-        emoji: "🔒",
-        title: "Unauthorized",
+        bg: isDarkMode ? "#450A0A" : "#FEF2F2",
+        text: isDarkMode ? "#FECACA" : "#B91C1C",
+        border: "#B91C1C",
+        badge: "#B91C1C",
+        title: "Locked",
       };
+      IconComponent = Lock;
       break;
     case "Autofill Successful":
       colors = {
-        bg: "#34D399", // Green
-        badge: "#10B981", // Green-600
-        emoji: "🤖",
-        title: "Autofill Successful",
+        bg: isDarkMode ? "#064E3B" : "#F0FDF4",
+        text: isDarkMode ? "#D1FAE5" : "#15803D",
+        border: "#22C55E",
+        badge: "#059669",
+        title: "Autofill",
       };
+      IconComponent = Zap;
       break;
     case "Something went Wrong":
       colors = {
-        bg: "#F59E42", // Orange
-        badge: "#EA580C",
-        emoji: "⚠️",
-        title: "Something went Wrong",
+        bg: isDarkMode ? "#450A0A" : "#FEF2F2",
+        text: isDarkMode ? "#FECACA" : "#B91C1C",
+        border: "#EF4444",
+        badge: "#EF4444",
+        title: "Error",
       };
+      IconComponent = XCircle;
       break;
     case "Survey Failure":
       colors = {
-        bg: "#F87171", // Light Red
-        badge: "#EF4444",
-        emoji: "📋",
-        title: "Survey Failure",
+        bg: isDarkMode ? "#450A0A" : "#FEF2F2",
+        text: isDarkMode ? "#FECACA" : "#B91C1C",
+        border: "#EF4444",
+        badge: "#E11D48",
+        title: "Failed",
       };
+      IconComponent = ClipboardX;
       break;
     case "User Not Found":
       colors = {
-        bg: "#F59E42", // Yellow-Orange
-        badge: "#FACC15",
-        emoji: "🙅‍♂️",
-        title: "User Not Found",
+        bg: isDarkMode ? "#3F2B0B" : "#FFFBEB",
+        text: isDarkMode ? "#FEF3C7" : "#854D0E",
+        border: "#D97706",
+        badge: "#D97706",
+        title: "Not Found",
       };
+      IconComponent = SearchX;
       break;
     case "User Details Unavailable":
       colors = {
-        bg: "#A5B4FC", // Indigo-100
-        badge: "#6366F1", // Indigo-500
-        emoji: "🙇‍♂️",
-        title: "User Details Unavailable",
+        bg: isDarkMode ? "#171717" : "#F5F5F5",
+        text: isDarkMode ? "#E5E5E5" : "#404040",
+        border: "#737373",
+        badge: "#737373",
+        title: "Unavailable",
       };
+      IconComponent = HelpCircle;
       break;
     case "notfound":
     case "not_found":
       colors = {
-        bg: "#FACC15",
-        badge: "#e5e7eb",
-        emoji: "😕",
+        bg: isDarkMode ? "#3F2B0B" : "#FFFBEB",
+        text: isDarkMode ? "#FEF3C7" : "#854D0E",
+        border: "#D97706",
+        badge: "#D97706",
         title: "Not Found",
       };
+      IconComponent = SearchX;
       break;
     default:
       colors = {
-        bg: "#FACC15",
-        badge: "#3B8298",
-        emoji: "😕",
-        title: typeof type === "string" ? type : "Notice",
+        bg: isDarkMode ? "#171717" : "#F8FAFC",
+        text: isDarkMode ? "#F5F5F5" : "#1E293B",
+        border: "#64748B",
+        badge: "#64748B",
+        title: typeof type === "string" ? type.charAt(0).toUpperCase() + type.slice(1) : "Notice",
       };
+      IconComponent = Bell;
   }
 
   useEffect(() => {
@@ -129,47 +173,52 @@ export default function CustomAlert({ type = "success", message, onConfirm, onCa
       transparent
       visible={visible}
       animationType="fade"
-      onRequestClose={() => { }} // disables Android back button close
+      onRequestClose={() => { }}
     >
       <View style={styles.overlay}>
         <Animated.View
           style={[
             styles.container,
-            { backgroundColor: colors.bg, transform: [{ scale: scaleAnim }] },
+            {
+              backgroundColor: colors.bg,
+              borderColor: isDarkMode ? 'rgba(255,255,255,0.1)' : colors.border + '30',
+              borderWidth: 2,
+              transform: [{ scale: scaleAnim }]
+            },
           ]}
         >
           {/* Badge Icon */}
           <View style={[styles.badge, { backgroundColor: colors.badge }]}>
-            <Text style={styles.badgeEmoji}>{colors.emoji}</Text>
+            <IconComponent size={34} color="#ffffff" strokeWidth={2.5} />
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>{colors.title}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{colors.title}</Text>
 
           {/* Message */}
-          <Text style={styles.message}>{message}</Text>
+          <Text style={[styles.message, { color: colors.text }]}>{message}</Text>
 
-          {/* Buttons Row (Single Line, Centered) */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginTop: 5 }}>
+          {/* Buttons Row */}
+          <View style={styles.buttonRow}>
             {typeof onCancel === 'function' && (
               <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#f87171', marginRight: 12, minWidth: 90 }]}
+                style={[styles.button, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', marginRight: 12 }]}
                 onPress={() => {
                   setVisible(false);
                   onCancel && onCancel();
                 }}
               >
-                <Text style={[styles.buttonText, { color: '#fff', textAlign: 'center' }]}>Cancel</Text>
+                <Text style={[styles.buttonText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.button, { minWidth: 90 }]}
+              style={[styles.button, { backgroundColor: colors.badge }]}
               onPress={() => {
                 setVisible(false);
                 onConfirm && onConfirm();
               }}
             >
-              <Text style={[styles.buttonText, { textAlign: 'center' }]}>OK</Text>
+              <Text style={[styles.buttonText, { color: '#ffffff' }]}>OK</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -181,53 +230,68 @@ export default function CustomAlert({ type = "success", message, onConfirm, onCa
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center", // vertical center
-    alignItems: "center",     // horizontal center
-  },
-  container: {
-    width: width * 0.8,        // 80% of screen width
-    borderRadius: 20,
-    padding: 20,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  badge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
   },
-  badgeEmoji: {
-    fontSize: 30,
+  container: {
+    width: width * 0.85,
+    borderRadius: 24,
+    padding: 24,
+    paddingTop: 45, // Increased padding to accommodate overlapping badge
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 10,
+    borderWidth: 2,
+    position: 'relative', // Ensure relative positioning for absolute badge
+    marginTop: 35, // Add margin to avoid badge clipping at screen top
+  },
+  badge: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    position: 'absolute',
+    top: -35, // Overlap the container
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 4,
+    borderColor: 'rgba(255,255,255,0.9)', // White border for the badge itself
   },
   title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "white",
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: 10,
+    textAlign: "center",
   },
   message: {
-    fontSize: 15,
-    color: "white",
+    fontSize: 17,
     textAlign: "center",
-    marginBottom: 20,
-    lineHeight: 20,
+    marginBottom: 24,
+    lineHeight: 24,
+    fontWeight: "500",
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   button: {
-    backgroundColor: "white",
-    paddingVertical: 10,
-    paddingHorizontal: 35,
-    borderRadius: 12,
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
   },
   buttonText: {
-    color: "#111827",
-    fontWeight: "600",
-    fontSize: 15,
+    fontWeight: "700",
+    fontSize: 16,
   },
 });

@@ -102,7 +102,6 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
           err?.message?.includes('E_LOCATION_TIMEOUT') ||
           err?.message?.includes('E_LOCATION_UNAVAILABLE')
         ) {
-          console.log('Location temporarily unavailable, retrying silently...');
         } else {
           setLocationReady(false);
           setAlertInfo({
@@ -162,10 +161,10 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
   };
 
   const handleSettingsPress = async () => {
-    
+
     // await Linking.openURL("android.settings.LOCATION_SOURCE_SETTINGS"); 
     await Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
-   
+
   };
 
   if (locationReady) return <>{children}</>;
@@ -179,7 +178,7 @@ const LocationGuard = ({ children }: LocationGuardProps) => {
         transparent
         animationType="fade"
         visible={alertInfo !== null}
-        onRequestClose={() => {}}
+        onRequestClose={() => { }}
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>

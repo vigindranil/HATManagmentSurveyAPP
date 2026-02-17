@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import { SelectList } from 'react-native-dropdown-select-list';
-import { styles } from '../SurveyStyles';
+import { getStyles } from '../SurveyStyles';
 import {
     yesNoOptions, documentTypes, transferRelationshipOptions, licenseType,
     applicationStatus, applicationFor, usesType, statusType, blockOrMunicipalityType
 } from '../../../constant/survey_constant';
+import { Colors, useTheme } from '@/context/theme-context';
 
 export const SurveyDropdownField = ({
     field, surveyData, updateField, district, policeStationOptions, mouzaOptions,
@@ -13,6 +14,10 @@ export const SurveyDropdownField = ({
     wardOptions, handleDistrictChange, handlePoliceStationChange, handleBlockTypeChange,
     handleBlockMunicipalityIdChange
 }: any) => {
+    const { isDarkMode, theme } = useTheme();
+    const styles = getStyles(isDarkMode);
+    const activeColors = Colors[theme];
+
     const dropdownDataMap: Record<string, any[]> = {
         licenseType, applicationStatus, applicationFor, usesType, documentTypes, statusType,
         block_or_municipality: blockOrMunicipalityType,
@@ -70,7 +75,6 @@ export const SurveyDropdownField = ({
     }
 
     // Construct a key that depends only on parent dependencies, not the value itself.
-    // This allows the close animation to play (no unmount on select) while ensuring resets work.
     let dependencyKey = '';
     if (['police_station_id', 'hat_id', 'block_or_municipality'].includes(field.key)) {
         dependencyKey = String(surveyData.district_id || '');
@@ -87,11 +91,11 @@ export const SurveyDropdownField = ({
     return (
         <View style={styles.fieldContainer}>
             <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-            <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6' }]}>
+            <View style={[styles.inputContainer, isDisabled && styles.disabledInputContainer]}>
                 {lockedLabel ? (
-                    <TextInput style={[styles.textInput, { color: '#6B7280', backgroundColor: '#F5F5F5', borderRadius: 10 }]} value={lockedLabel} editable={false} />
+                    <TextInput style={[styles.textInput, { color: activeColors.subtext, backgroundColor: 'transparent' }]} value={lockedLabel} editable={false} />
                 ) : isDisabled ? (
-                    <View style={{ padding: 16 }}><Text style={{ color: '#9CA3AF', fontSize: 16 }}>{disabledPlaceholder}</Text></View>
+                    <View style={{ padding: 16 }}><Text style={{ color: activeColors.subtext, fontSize: 16 }}>{disabledPlaceholder}</Text></View>
                 ) : (
                     <SelectList
                         key={selectKey}
@@ -103,10 +107,11 @@ export const SurveyDropdownField = ({
                         }}
                         data={data} save="key" search={isApiDropdown} placeholder={field.placeholder} defaultOption={defaultOptionObj}
                         boxStyles={{ borderWidth: 0, paddingHorizontal: 16, paddingVertical: 14 }}
-                        dropdownStyles={{ borderWidth: 0 }}
-                        dropdownTextStyles={{ fontWeight: 'bold', color: '#111827', fontSize: 16 }}
-                        dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingVertical: 10, marginHorizontal: 10 }}
-                        inputStyles={{ color: '#000000', fontSize: 16 }}
+                        dropdownStyles={{ borderWidth: 1, borderColor: activeColors.border, backgroundColor: activeColors.card }}
+                        dropdownTextStyles={{ fontWeight: 'bold', color: activeColors.text, fontSize: 16 }}
+                        dropdownItemStyles={{ borderBottomWidth: 1, borderBottomColor: activeColors.border, paddingVertical: 10, marginHorizontal: 10 }}
+                        inputStyles={{ color: activeColors.text, fontSize: 16 }}
+                        searchPlaceholder="Search..."
                     />
                 )}
             </View>

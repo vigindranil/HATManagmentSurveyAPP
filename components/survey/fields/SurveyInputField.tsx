@@ -1,13 +1,16 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
-import { styles } from '../SurveyStyles';
+import { getStyles } from '../SurveyStyles';
 import { numericFields, getMaxLength } from '../../../constant/survey_constant';
 import { getUserDetailsByPhoneNumber } from '@/api';
+import { useTheme, Colors } from '@/context/theme-context';
 
 export const SurveyInputField = ({
     field, surveyData, updateField, mobileAutofillSuccessful, isPanAutofilled,
     setMobileAutofillSuccessful, setIsPanAutofilled, setAlertInfo, scrollViewRef
 }: any) => {
+    const { isDarkMode, theme } = useTheme();
+    const styles = getStyles(isDarkMode);
     const isEditable = field.key !== 'user_id' && field.key !== 'citizenship';
     const autoFields = ['name', 'guardian_name', 'address', 'pin_code'];
     const panField = ['pan'];
@@ -56,13 +59,14 @@ export const SurveyInputField = ({
     }
     const isNumeric = numericFields.includes(field.key) || (field.key === 'documentNumber' && surveyData.documentTypes === '1');
     const value = surveyData[field.key] || '';
+    const activeColors = Colors[theme];
 
     return (
         <View style={styles.fieldContainer} onLayout={(e) => { (field as any)._y = e.nativeEvent.layout.y; }}>
             <Text style={styles.fieldLabel}>{field.label} {field.required && <Text style={styles.required}>*</Text>}</Text>
-            <View style={[styles.inputContainer, isDisabled && { backgroundColor: '#F3F4F6' }]}>
+            <View style={[styles.inputContainer, isDisabled && styles.disabledInputContainer]}>
                 <TextInput
-                    style={[styles.textInput, field.multiline && styles.textInputMultiline]}
+                    style={[styles.textInput, field.multiline && styles.textInputMultiline, isDisabled && { color: activeColors.subtext }]}
                     value={String(value)} placeholder={field.placeholder} editable={!isDisabled}
                     placeholderTextColor="#9CA3AF" keyboardType={isNumeric ? 'numeric' : 'default'}
                     maxLength={getMaxLength(field.key) || (field.key === 'documentNumber' ? (surveyData.documentTypes === '1' ? 12 : 20) : undefined)}

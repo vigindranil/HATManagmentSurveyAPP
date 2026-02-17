@@ -5,7 +5,7 @@ export async function compressImageUri(uri: string, minKB = 200, maxKB = 300): P
   if (!uri) throw new Error('No URI provided for compression');
 
   try {
-    let quality = 0.8; 
+    let quality = 0.8;
     let width = 1200;  // start with higher resolution for good quality
     let resultUri = uri;
     let sizeKB = Infinity;
@@ -25,22 +25,20 @@ export async function compressImageUri(uri: string, minKB = 200, maxKB = 300): P
       // sizeKB = info.exists && info.size ? info.size / 1024 : Infinity;
 
       resultUri = result.uri;
-      // console.log('Current sizeKB:', sizeKB, 'Quality:', quality, 'Width:', width);
 
-     
+
       if (sizeKB > maxKB) {
-        quality -= 0.05;  
-        width -= 100;     
+        quality -= 0.05;
+        width -= 100;
       } else if (sizeKB < minKB) {
-        quality += 0.05;  
-        width += 50;      
+        quality += 0.05;
+        width += 50;
       }
       if (quality > 0.9) quality = 0.9;
       if (width > 1200) width = 1200;
     }
 
     if (!resultUri) throw new Error('Compression failed: no URI generated');
-    // console.log('Final sizeKB:', sizeKB);
 
     return resultUri;
 
